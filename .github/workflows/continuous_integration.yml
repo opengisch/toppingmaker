@@ -1,0 +1,77 @@
+name: Continuous integration
+
+on:
+  push:
+    branches:
+      - main
+      - release-**
+  pull_request:
+    branches:
+      - '**'
+  release:
+    types: [released]
+
+jobs:
+  # Run unit tests
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        qgis_version: [release-3_16, release-3_22, latest]
+    env:
+      QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Test on QGIS
+        run: docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh
+        
+  release:
+    name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.9
+    - name: Package PyPI Packages
+      run: |
+        sudo ./scripts/package_pip_packages.sh
+    - name: Get version number
+      id: v
+      run: |
+        export VERSION_NUMBER=${GITHUB_REF/refs\/tags\/v}
+        echo $VERSION_NUMBER > VERSION
+        echo "::set-output name=VERSION::${VERSION_NUMBER}"
+    - name: Install pypa/build
+      run: >-
+        python -m
+        pip install
+        build
+        --user
+    - name: Build a binary wheel and a source tarball
+      run: >-
+        python -m
+        build
+        --sdist
+        --wheel
+        --outdir dist/
+        .
+    - name: 🚀 Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: dist/toppingmaker-${{ steps.v.outputs.VERSION }}-py3-none-any.whl
+        asset_name: dist/toppingmaker-${{ steps.v.outputs.VERSION }}-py3-none-any.whl
+        asset_content_type: application/binary
+
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}

@@ -247,6 +247,7 @@ class ProjectTopping(QObject):
         """
         - [ ] Not yet implemented.
         """
+        raise NotImplementedError
 
     def generate_project(self, target: Target) -> QgsProject:
         """

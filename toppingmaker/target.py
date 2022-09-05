@@ -82,7 +82,8 @@ class Target(object):
         )
         return self.path_resolver(self, filename_slug, type)
 
-    def default_path_resolver(self, target, name, type):
+    @staticmethod
+    def default_path_resolver(target, name, type):
         _, relative_filedir_path = target.filedir_path(type)
 
         toppingfile = {"path": os.path.join(relative_filedir_path, name), "type": type}

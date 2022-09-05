@@ -86,7 +86,7 @@ The usual structure is using QgsLayerTreeNode as key and then export True/False
 }
 ```
 
-But alternatively the layername can be used as key. In ProjectTopping it first looks up the node and if not available looking up the name.
+Alternatively the layername can be used as key. In ProjectTopping it first looks up the node and if not available the name.
 Using the node is much more consistent, since one can use layers with the same name, but for nodes you need the project already in advance.
 With name you can use prepared settings to pass (before the project exists) e.g. in automated workflows.
 ```py

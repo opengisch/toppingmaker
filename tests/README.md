@@ -14,5 +14,5 @@ docker run -v ${GITHUB_WORKSPACE}:/usr/src -w /usr/src opengisch/qgis:${QGIS_TES
 
 In one line, removing all containers.
 ```sh
-QGIS_TEST_VERSION=latest GITHUB_WORKSPACE=$PWD docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh; GITHUB_WORKSPACE=$PWD docker-compose -f .docker/docker-compose.gh.yml rm -s -f
+QGIS_TEST_VERSION=latest GITHUB_WORKSPACE=$PWD docker run -v ${GITHUB_WORKSPACE}:/usr/src -w /usr/src opengisch/qgis:${QGIS_TEST_VERSION} sh -c 'xvfb-run pytest-3'
 ```

@@ -16,107 +16,6 @@ toppingmaker
 └── utils.py
 ```
 
-## projecttopping.ProjectTopping
-A project configuration resulting in a YAML file that contains:
-- layertree
-- layerorder
-- project variables (future)
-- print layout (future)
-- map themes (future)
-
-QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
-
-### `parse_project( project: QgsProject, export_settings: ExportSettings = ExportSettings()`
-Parses a project into the ProjectTopping structure. Means the LayerTreeNodes are loaded into the layertree variable and append the ExportSettings to each node. The CustomLayerOrder is loaded into the layerorder. The project is not kept as member variable.
-
-### `generate_files(self, target: Target) -> str`
-Generates all files according to the passed Target.
-The target object containing the paths where to create the files and the path_resolver defining the structure of the link.
-
-### `load_files(self, target: Target)`
-not yet implemented
-
-### `generate_project(self, target: Target) -> QgsProject`
-not yet implemented
-
-## target.Target
-If there is no subdir it will look like:
-```
-    <maindir>
-    ├── projecttopping
-    │  └── <projectname>.yaml
-    ├── layerstyle
-    │  ├── <projectname>_<layername>.qml
-    │  └── <projectname>_<layername>.qml
-    └── layerdefinition
-       └── <projectname>_<layername>.qlr
-```
-With subdir:
-```
-    <maindir>
-    └── <subdir>
-       ├── projecttopping
-       │  └── <projectname>.yaml
-       ├── layerstyle
-       │  ├── <projectname>_<layername>.qml
-       │  └── <projectname>_<layername>.qml
-       └── layerdefinition
-          └── <projectname>_<layername>.qlr
-```
-
-The `path_resolver` can be passed as a function. The default implementation lists the created toppingfiles (including the YAML) in the dict `Target.toppingfileinfo_list` with the `"path": <relative_filepath>, "type": <filetype>`.
-
-### `Target( projectname: str = "project", main_dir: str = None, sub_dir: str = None, path_resolver=None)`
-The constructor of the target class to set up a target.
-A member variable `toppingfileinfo_list = []` is defined, to store all the information according the `path_resolver`.
-
-## exportsettings.ExportSettings
-
-The requested export settings of each node in the specific dicts:
-- qmlstyle_setting_nodes
-- definition_setting_nodes
-- source_setting_nodes
-
-The usual structure is using QgsLayerTreeNode as key and then export True/False
-
-```py
-{
-    <QgsLayerTreeNode(Node1)>: { export: False }
-    <QgsLayerTreeNode(Node2)>: { export: True }
-}
-```
-
-Alternatively the layername can be used as key. In ProjectTopping it first looks up the node and if not available the name.
-Using the node is much more consistent, since one can use layers with the same name, but for nodes you need the project already in advance.
-With name you can use prepared settings to pass (before the project exists) e.g. in automated workflows.
-```py
-{
-    "Node1": { export: False }
-    "Node2": { export: True }
-}
-```
-
-For some settings we have additional info. Like in qmlstyle_nodes <QgsMapLayer.StyleCategories>. These are Flags, and can be constructed manually as well.
-```py
-qmlstyle_nodes =
-{
-    <QgsLayerTreeNode(Node1)>: { export: False }
-    <QgsLayerTreeNode(Node2)>: { export: True, categories: <QgsMapLayer.StyleCategories> }
-}
-```
-
-### `set_setting_values( type: ToppingType, node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None, name: str = None, export=True categories=None, ) -> bool`
-
-Set the specific types concerning the enumerations:
-```py
-class ToppingType(Enum):
-    QMLSTYLE = 1
-    DEFINITION = 2
-    SOURCE = 3
-
-```
-
-
 ## User Manual
 
 Having a QGIS Project with some layers:
@@ -285,6 +184,107 @@ layertree:
         expanded: true
         provider: wms
         uri: contextualWMSLegend=0&crs=EPSG:2056&dpiMode=7&featureCount=10&format=image/jpeg&layers=ch.swisstopo.pixelkarte-grau&styles&url=https://wms.geo.admin.ch/?%0ASERVICE%3DWMS%0A%26VERSION%3D1.3.0%0A%26REQUEST%3DGetCapabilities
+```
+
+## Most important functions
+### projecttopping.ProjectTopping
+A project configuration resulting in a YAML file that contains:
+- layertree
+- layerorder
+- project variables (future)
+- print layout (future)
+- map themes (future)
+
+QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
+
+#### `parse_project( project: QgsProject, export_settings: ExportSettings = ExportSettings()`
+Parses a project into the ProjectTopping structure. Means the LayerTreeNodes are loaded into the layertree variable and append the ExportSettings to each node. The CustomLayerOrder is loaded into the layerorder. The project is not kept as member variable.
+
+#### `generate_files(self, target: Target) -> str`
+Generates all files according to the passed Target.
+The target object containing the paths where to create the files and the path_resolver defining the structure of the link.
+
+#### `load_files(self, target: Target)`
+not yet implemented
+
+#### `generate_project(self, target: Target) -> QgsProject`
+not yet implemented
+
+### target.Target
+If there is no subdir it will look like:
+```
+    <maindir>
+    ├── projecttopping
+    │  └── <projectname>.yaml
+    ├── layerstyle
+    │  ├── <projectname>_<layername>.qml
+    │  └── <projectname>_<layername>.qml
+    └── layerdefinition
+       └── <projectname>_<layername>.qlr
+```
+With subdir:
+```
+    <maindir>
+    └── <subdir>
+       ├── projecttopping
+       │  └── <projectname>.yaml
+       ├── layerstyle
+       │  ├── <projectname>_<layername>.qml
+       │  └── <projectname>_<layername>.qml
+       └── layerdefinition
+          └── <projectname>_<layername>.qlr
+```
+
+The `path_resolver` can be passed as a function. The default implementation lists the created toppingfiles (including the YAML) in the dict `Target.toppingfileinfo_list` with the `"path": <relative_filepath>, "type": <filetype>`.
+
+#### `Target( projectname: str = "project", main_dir: str = None, sub_dir: str = None, path_resolver=None)`
+The constructor of the target class to set up a target.
+A member variable `toppingfileinfo_list = []` is defined, to store all the information according the `path_resolver`.
+
+### exportsettings.ExportSettings
+
+The requested export settings of each node in the specific dicts:
+- qmlstyle_setting_nodes
+- definition_setting_nodes
+- source_setting_nodes
+
+The usual structure is using QgsLayerTreeNode as key and then export True/False
+
+```py
+{
+    <QgsLayerTreeNode(Node1)>: { export: False }
+    <QgsLayerTreeNode(Node2)>: { export: True }
+}
+```
+
+Alternatively the layername can be used as key. In ProjectTopping it first looks up the node and if not available the name.
+Using the node is much more consistent, since one can use layers with the same name, but for nodes you need the project already in advance.
+With name you can use prepared settings to pass (before the project exists) e.g. in automated workflows.
+```py
+{
+    "Node1": { export: False }
+    "Node2": { export: True }
+}
+```
+
+For some settings we have additional info. Like in qmlstyle_nodes <QgsMapLayer.StyleCategories>. These are Flags, and can be constructed manually as well.
+```py
+qmlstyle_nodes =
+{
+    <QgsLayerTreeNode(Node1)>: { export: False }
+    <QgsLayerTreeNode(Node2)>: { export: True, categories: <QgsMapLayer.StyleCategories> }
+}
+```
+
+#### `set_setting_values( type: ToppingType, node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None, name: str = None, export=True categories=None, ) -> bool`
+
+Set the specific types concerning the enumerations:
+```py
+class ToppingType(Enum):
+    QMLSTYLE = 1
+    DEFINITION = 2
+    SOURCE = 3
+
 ```
 
 ## Infos for Devs

@@ -196,7 +196,7 @@ layertree:
     group: true
 ```
 
-The structure is exported. But not any additional files. For that we need to parse the `ExportSettings** to the **ProjectTopping**.
+The structure is exported. But not any additional files. For that, we need to parse the `ExportSettings` to the `ProjectTopping`.
 
 ### Create the `ExportSettings`:
 

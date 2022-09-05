@@ -26,7 +26,7 @@ jobs:
         with:
           submodules: recursive
       - name: Test on QGIS
-        run: docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh
+        run: docker run -v ${GITHUB_WORKSPACE}:/usr/src -w /usr/src opengisch/qgis:${QGIS_TEST_VERSION} sh -c 'xvfb-run pytest-3'
 
   release:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI

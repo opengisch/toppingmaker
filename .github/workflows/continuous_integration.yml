@@ -27,7 +27,7 @@ jobs:
           submodules: recursive
       - name: Test on QGIS
         run: docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh
-        
+
   release:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
     if: startsWith(github.ref, 'refs/tags/v')

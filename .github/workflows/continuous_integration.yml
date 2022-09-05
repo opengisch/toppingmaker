@@ -38,9 +38,6 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.9
-    - name: Package PyPI Packages
-      run: |
-        sudo ./scripts/package_pip_packages.sh
     - name: Get version number
       id: v
       run: |

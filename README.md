@@ -27,7 +27,7 @@ A project configuration resulting in a YAML file that contains:
 QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
 
 ### `parse_project( project: QgsProject, export_settings: ExportSettings = ExportSettings()`
-Parses a project into the ProjectTopping structure. Means the LayerTreeNodes are loaded into the layertree variable and append the ExportSettings to each node. The CustomLayerOrder is loaded into the layerorder. The project is not keeped as member variable.
+Parses a project into the ProjectTopping structure. Means the LayerTreeNodes are loaded into the layertree variable and append the ExportSettings to each node. The CustomLayerOrder is loaded into the layerorder. The project is not kept as member variable.
 
 ### `generate_files(self, target: Target) -> str`
 Generates all files according to the passed Target.

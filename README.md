@@ -240,7 +240,7 @@ project_topping.parse_project(project, export_settings)
 project_topping.generate_files(target)
 ```
 
-Structure looks like this:
+The structure looks like this:
 
 ```
 repo

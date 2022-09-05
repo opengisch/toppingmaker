@@ -9,7 +9,7 @@ To run the tests, go to the main directory of the project and do
 ```sh
 export QGIS_TEST_VERSION=latest # See https://hub.docker.com/r/qgis/qgis/tags/
 export GITHUB_WORKSPACE=$PWD # only for local execution
-docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh
+docker run -v ${GITHUB_WORKSPACE}:/usr/src -w /usr/src opengisch/qgis:${QGIS_TEST_VERSION} sh -c 'xvfb-run pytest-3'
 ```
 
 In one line, removing all containers.

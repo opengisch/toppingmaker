@@ -152,7 +152,7 @@ target = Target(projectname="freddys_qgis_project", main_dir="/home/fred/repo/",
 project_topping.generate_files(target)
 ```
 
-Structure looks like this:
+The structure looks like this:
 
 ```
 repo

@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        qgis_version: [release-3_16, release-3_22, latest]
+        qgis_version: [focal-3.16, focal-3.22, latest]
     env:
       QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
     steps:
@@ -26,8 +26,8 @@ jobs:
         with:
           submodules: recursive
       - name: Test on QGIS
-        run: docker-compose -f .docker/docker-compose.gh.yml run qgis /usr/src/.docker/run-docker-tests.sh
-        
+        run: docker run -v ${GITHUB_WORKSPACE}:/usr/src -w /usr/src opengisch/qgis:${QGIS_TEST_VERSION} sh -c 'xvfb-run pytest-3'
+
   release:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
     if: startsWith(github.ref, 'refs/tags/v')

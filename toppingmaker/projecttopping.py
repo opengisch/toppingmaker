@@ -27,6 +27,7 @@ from qgis.core import (
     QgsLayerDefinition,
     QgsLayerTreeGroup,
     QgsLayerTreeLayer,
+    QgsLayerTreeNode,
     QgsMapLayer,
     QgsProject,
 )
@@ -94,6 +95,7 @@ class ProjectTopping(QObject):
 
         def make_item(
             self,
+            project: QgsProject,
             node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup],
             export_settings: ExportSettings,
         ):
@@ -102,36 +104,7 @@ class ProjectTopping(QObject):
             self.properties.checked = node.itemVisibilityChecked()
             self.properties.expanded = node.isExpanded()
 
-            if isinstance(node, QgsLayerTreeLayer):
-                self.properties.featurecount = node.customProperty("showFeatureCount")
-                source_setting = export_settings.get_setting(
-                    ExportSettings.ToppingType.SOURCE, node, node.name()
-                )
-                if source_setting.get("export", False):
-                    if node.layer().dataProvider():
-                        if node.layer().dataProvider():
-                            self.properties.provider = (
-                                node.layer().dataProvider().name()
-                            )
-                        self.properties.uri = (
-                            QgsProject.instance()
-                            .pathResolver()
-                            .writePath(node.layer().publicSource())
-                        )
-                qml_setting = export_settings.get_setting(
-                    ExportSettings.ToppingType.QMLSTYLE, node, node.name()
-                )
-                if qml_setting.get("export", False):
-                    self.properties.qmlstylefile = self._temporary_qmlstylefile(
-                        node,
-                        QgsMapLayer.StyleCategory(
-                            qml_setting.get(
-                                "categories",
-                                QgsMapLayer.StyleCategory.AllStyleCategories,
-                            )
-                        ),
-                    )
-            elif isinstance(node, QgsLayerTreeGroup):
+            if isinstance(node, QgsLayerTreeGroup):
                 # it's a group
                 self.properties.group = True
                 self.properties.mutually_exclusive = node.isMutuallyExclusive()
@@ -139,7 +112,7 @@ class ProjectTopping(QObject):
                 index = 0
                 for child in node.children():
                     item = ProjectTopping.LayerTreeItem()
-                    item.make_item(child, export_settings)
+                    item.make_item(project, child, export_settings)
                     # set the first checked item as mutually exclusive child
                     if (
                         self.properties.mutually_exclusive
@@ -150,16 +123,52 @@ class ProjectTopping(QObject):
                     self.items.append(item)
                     index += 1
             else:
-                print(
-                    f"Here with {node.name()} we have the problem with the LayerTreeNode (it recognizes on QgsLayerTreeLayer QgsLayerTreeNode instead. Similar to https://github.com/opengisch/QgisModelBaker/pull/514 - this needs a fix - maybe in QGIS"
+                if isinstance(node, QgsLayerTreeLayer):
+                    layer = node.layer()
+                else:
+                    # must be not recognized as QgsLayerTreeLayer (but QgsLayerTreeNode instead)
+                    layer = self._layer_of_node(project, node)
+                self.properties.featurecount = node.customProperty("showFeatureCount")
+                source_setting = export_settings.get_setting(
+                    ExportSettings.ToppingType.SOURCE, node, node.name()
                 )
-                return
+                if source_setting.get("export", False):
+                    if layer.dataProvider():
+                        if layer.dataProvider():
+                            self.properties.provider = layer.dataProvider().name()
+                        self.properties.uri = (
+                            QgsProject.instance()
+                            .pathResolver()
+                            .writePath(layer.publicSource())
+                        )
+                qml_setting = export_settings.get_setting(
+                    ExportSettings.ToppingType.QMLSTYLE, node, node.name()
+                )
+                if qml_setting.get("export", False):
+                    self.properties.qmlstylefile = self._temporary_qmlstylefile(
+                        layer,
+                        QgsMapLayer.StyleCategory(
+                            qml_setting.get(
+                                "categories",
+                                QgsMapLayer.StyleCategory.AllStyleCategories,
+                            )
+                        ),
+                    )
 
             definition_setting = export_settings.get_setting(
                 ExportSettings.ToppingType.DEFINITION, node, node.name()
             )
             if definition_setting.get("export", False):
                 self.properties.definitionfile = self._temporary_definitionfile(node)
+
+        def _layer_of_node(
+            self,
+            project: QgsProject,
+            node: QgsLayerTreeNode,
+        ) -> QgsLayerTreeLayer:
+            # workaround when layer has not been detected as QgsLayerTreeLayer.
+            # See https://github.com/opengisch/QgisModelBaker/pull/514
+            return project.mapLayersByName(node.name())[0]
 
         def _temporary_definitionfile(
             self, node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup]
@@ -174,7 +183,7 @@ class ProjectTopping(QObject):
 
         def _temporary_qmlstylefile(
             self,
-            node: QgsLayerTreeLayer,
+            layer: QgsMapLayer,
             categories: QgsMapLayer.StyleCategories = QgsMapLayer.StyleCategory.AllStyleCategories,
         ):
             filename_slug = f"{slugify(self.name)}.qml"
@@ -182,7 +191,7 @@ class ProjectTopping(QObject):
             temporary_toppingfile_path = os.path.join(
                 self.temporary_toppingfile_dir, filename_slug
             )
-            node.layer().saveNamedStyle(temporary_toppingfile_path, categories)
+            layer.saveNamedStyle(temporary_toppingfile_path, categories)
             return temporary_toppingfile_path
 
     def __init__(self):
@@ -201,7 +210,7 @@ class ProjectTopping(QObject):
         """
         root = project.layerTreeRoot()
         if root:
-            self.layertree.make_item(project.layerTreeRoot(), export_settings)
+            self.layertree.make_item(project, project.layerTreeRoot(), export_settings)
             self.layerorder = (
                 root.customLayerOrder() if root.hasCustomLayerOrder() else []
             )

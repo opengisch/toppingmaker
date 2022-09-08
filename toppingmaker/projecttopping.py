@@ -104,24 +104,32 @@ class ProjectTopping(QObject):
             self.properties.checked = node.itemVisibilityChecked()
             self.properties.expanded = node.isExpanded()
 
+            definition_setting = export_settings.get_setting(
+                ExportSettings.ToppingType.DEFINITION, node, node.name()
+            )
+            if definition_setting.get("export", False):
+                self.properties.definitionfile = self._temporary_definitionfile(node)
+
             if isinstance(node, QgsLayerTreeGroup):
                 # it's a group
                 self.properties.group = True
                 self.properties.mutually_exclusive = node.isMutuallyExclusive()
 
-                index = 0
-                for child in node.children():
-                    item = ProjectTopping.LayerTreeItem()
-                    item.make_item(project, child, export_settings)
-                    # set the first checked item as mutually exclusive child
-                    if (
-                        self.properties.mutually_exclusive
-                        and self.properties.mutually_exclusive_child == -1
-                    ):
-                        if item.properties.checked:
-                            self.properties.mutually_exclusive_child = index
-                    self.items.append(item)
-                    index += 1
+                if not definition_setting.get("export", False):
+                    # only consider children, when the group is not exported as DEFINITION
+                    index = 0
+                    for child in node.children():
+                        item = ProjectTopping.LayerTreeItem()
+                        item.make_item(project, child, export_settings)
+                        # set the first checked item as mutually exclusive child
+                        if (
+                            self.properties.mutually_exclusive
+                            and self.properties.mutually_exclusive_child == -1
+                        ):
+                            if item.properties.checked:
+                                self.properties.mutually_exclusive_child = index
+                        self.items.append(item)
+                        index += 1
             else:
                 if isinstance(node, QgsLayerTreeLayer):
                     layer = node.layer()
@@ -154,12 +162,6 @@ class ProjectTopping(QObject):
                             )
                         ),
                     )
-
-            definition_setting = export_settings.get_setting(
-                ExportSettings.ToppingType.DEFINITION, node, node.name()
-            )
-            if definition_setting.get("export", False):
-                self.properties.definitionfile = self._temporary_definitionfile(node)
 
         def _layer_of_node(
             self,

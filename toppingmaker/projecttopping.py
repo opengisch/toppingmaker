@@ -24,6 +24,7 @@ from typing import Union
 import yaml
 from qgis.core import (
     Qgis,
+    QgsDataSourceUri,
     QgsLayerDefinition,
     QgsLayerTreeGroup,
     QgsLayerTreeLayer,
@@ -81,6 +82,10 @@ class ProjectTopping(QObject):
             self.qmlstylefile = None
             # the definition file - if None then not requested
             self.definitionfile = None
+            # the table name (if no source available)
+            self.tablename = None
+            # the geometry column (if no source available)
+            self.geometrycolumn = None
 
     class LayerTreeItem(object):
         """
@@ -142,13 +147,35 @@ class ProjectTopping(QObject):
                 )
                 if source_setting.get("export", False):
                     if layer.dataProvider():
-                        if layer.dataProvider():
-                            self.properties.provider = layer.dataProvider().name()
+                        self.properties.provider = layer.dataProvider().name()
                         self.properties.uri = (
                             QgsProject.instance()
                             .pathResolver()
                             .writePath(layer.publicSource())
                         )
+
+                # if neither a definition file nor the source should be exported we store the tablename (and the geometry column)
+                if not definition_setting.get(
+                    "export", False
+                ) and not source_setting.get("export", False):
+                    provider = layer.dataProvider()
+                    if provider:
+                        # supported providers are postgres, mssql and GPKG (ogr)
+                        if provider.name() == "postgres" or provider.name() == "mssql":
+                            self.properties.tablename = QgsDataSourceUri(
+                                provider.dataSourceUri()
+                            ).table()
+                            self.properties.geometry = QgsDataSourceUri(
+                                provider.dataSourceUri()
+                            ).geometryColumn()
+                        elif (
+                            provider.name() == "ogr"
+                            and provider.storageType() == "GPKG"
+                        ):
+                            self.properties.tablename = (
+                                provider.dataSourceUri().split("layername=")[1].strip()
+                            )
+
                 qml_setting = export_settings.get_setting(
                     ExportSettings.ToppingType.QMLSTYLE, node, node.name()
                 )
@@ -299,6 +326,12 @@ class ProjectTopping(QObject):
                     "mutually-exclusive-child"
                 ] = item.properties.mutually_exclusive_child
         else:
+            if item.properties.tablename:
+                item_properties_dict["tablename"] = item.properties.tablename
+                if item.properties.geometrycolumn:
+                    item_properties_dict[
+                        "geometrycolumn"
+                    ] = item.properties.geometrycolumn
             if item.properties.featurecount:
                 item_properties_dict["featurecount"] = True
             if item.properties.qmlstylefile:

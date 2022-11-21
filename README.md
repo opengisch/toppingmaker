@@ -158,15 +158,21 @@ And the YAML looks like this:
 layerorder: []
 layertree:
 - Street:
+    tablename: street
+    geometrycolumn: geometry
     checked: true
     expanded: true
     stylefile: freddys_qgis_topping/layerstyle/freddys_qgis_project_street.qml
 - Park:
+    tablename: park
+    geometrycolumn: geometry
     checked: false
     expanded: true
     provider: ogr
     uri: /home/freddy/qgis_projects/bakery/cityandcity.gpkg|layername=park
 - Building:
+    tablename: building_2
+    geometrycolumn: geometry
     checked: true
     expanded: true
 - Info Layers:
@@ -193,6 +199,7 @@ A project configuration resulting in a YAML file that contains:
 - layerorder
 - project variables (future)
 - print layout (future)
+- layer styles (future)
 - map themes (future)
 
 QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.

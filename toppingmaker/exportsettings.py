@@ -32,16 +32,16 @@ class ExportSettings(object):
 
     The usual structure is using QgsLayerTreeNode as key and then export True/False
     {
-        <QgsLayerTreeNode(Node1)>: { export: False }
-        <QgsLayerTreeNode(Node2)>: { export: True }
+        <QgsLayerTreeNode(Node1)>: { export: False },
+        <QgsLayerTreeNode(Node2)>: { export: True, export: True }
     }
 
     But alternatively the layername can be used as key. In ProjectTopping it first looks up the node and if not available looking up the name.
     Using the node is much more consistent, since one can use layers with the same name, but for nodes you need the project already in advance.
     With name you can use prepared settings to pass (before the project exists) e.g. in automated workflows.
     {
-        "Node1": { export: False }
-        "Node2": { export: True }
+        "Node1": { export: False },
+        "Node2": { export: True },
     }
 
     For some settings we have additional info. Like in qmlstyle_nodes <QgsMapLayer.StyleCategories>. These are Flags, and can be constructed manually as well.
@@ -49,6 +49,14 @@ class ExportSettings(object):
     {
         <QgsLayerTreeNode(Node1)>: { export: False }
         <QgsLayerTreeNode(Node2)>: { export: True, categories: <QgsMapLayer.StyleCategories> }
+    }
+
+    If styles are used as well we create tuples as key. Mutable objects are not alowed in it, so they would be created with the (layer) name and the style (name):
+    {
+        <QgsLayerTreeNode(Node1)>: { export: False }
+        <QgsLayerTreeNode(Node2)>: { export: True, categories: <QgsMapLayer.StyleCategories> }
+        ("Node2","french"): { export: True, categories: <QgsMapLayer.StyleCategories> },
+        ("Node2","robot"): { export: True, categories: <QgsMapLayer.StyleCategories> }
     }
     """
 
@@ -69,28 +77,30 @@ class ExportSettings(object):
         name: str = None,
         export=True,
         categories=None,
+        style: str = None,
     ) -> bool:
         """
         Appends the values (export, categories) to an existing setting
         """
         setting_nodes = self._setting_nodes(type)
-        setting = self._get_setting(setting_nodes, node, name)
+        setting = self._get_setting(setting_nodes, node, name, style)
         setting["export"] = export
         if categories:
             setting["categories"] = categories
-        return self._set_setting(setting_nodes, setting, node, name)
+        return self._set_setting(setting_nodes, setting, node, name, style)
 
     def get_setting(
         self,
         type: ToppingType,
         node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None,
         name: str = None,
+        style: str = None,
     ) -> dict():
         """
         Returns an existing or an empty setting dict
         """
         setting_nodes = self._setting_nodes(type)
-        return self._get_setting(setting_nodes, node, name)
+        return self._get_setting(setting_nodes, node, name, style)
 
     def _setting_nodes(self, type: ToppingType):
         if type == ExportSettings.ToppingType.QMLSTYLE:
@@ -100,19 +110,29 @@ class ExportSettings(object):
         if type == ExportSettings.ToppingType.SOURCE:
             return self.source_setting_nodes
 
-    def _get_setting(self, setting_nodes, node=None, name=None):
-        setting = {}
-        if node:
-            setting = setting_nodes.get(node, {})
-        if not setting:
-            setting = setting_nodes.get(name, {})
+    def _get_setting(self, setting_nodes, node=None, name=None, style=None):
+        key = self._key(node, name, style)
+        setting = setting_nodes.get(key, {})
         return setting
 
-    def _set_setting(self, setting_nodes, setting, node=None, name=None) -> bool:
-        if node:
-            setting_nodes[node] = setting
-            return True
-        if name:
-            setting_nodes[name] = setting
+    def _set_setting(
+        self, setting_nodes, setting, node=None, name=None, style=None
+    ) -> bool:
+        key = self._key(node, name, style)
+        if key:
+            setting_nodes[key] = setting
             return True
         return False
+
+    def _key(self, node=None, name=None, style=None):
+        if node:
+            if style:
+                return (node.name(), style)
+            else:
+                return node
+        elif name:
+            if style:
+                return (name, style)
+            else:
+                return name
+        return None

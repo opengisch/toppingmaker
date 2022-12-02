@@ -66,9 +66,12 @@ class ExportSettings(object):
         SOURCE = 3
 
     def __init__(self):
+        # layertree settings
         self.qmlstyle_setting_nodes = {}
         self.definition_setting_nodes = {}
         self.source_setting_nodes = {}
+        # maptheme settings
+        self.mapthemes = []
 
     def set_setting_values(
         self,

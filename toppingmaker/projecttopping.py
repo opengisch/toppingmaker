@@ -275,9 +275,54 @@ class ProjectTopping(QObject):
                 item_list.append(item_dict)
             return item_list
 
+    class MapThemes(dict):
+        """
+        A dict object of dict items describing a MapThemeRecord according to the maptheme names listed in the ExportSettings passed on parsing the QGIS project.
+        """
+
+        def make_items(
+            self,
+            project: QgsProject,
+            export_settings: ExportSettings,
+        ):
+            self.clear()
+
+            maptheme_collection = QgsProject.instance().mapThemeCollection()
+            for name in export_settings.mapthemes:
+                maptheme_item = {}
+                maptheme_record = maptheme_collection.mapThemeState(name)
+                for layerrecord in maptheme_record.layerRecords():
+                    layername = layerrecord.layer().name()
+                    maptheme_item[layername] = {}
+                    if layerrecord.usingCurrentStyle:
+                        maptheme_item[layername]["style"] = layerrecord.currentStyle
+                    maptheme_item[layername]["visible"] = layerrecord.isVisible
+                    maptheme_item[layername]["expanded"] = layerrecord.expandedLayerNode
+                    if layerrecord.expandedLegendItems:
+                        maptheme_item[layername][
+                            "expanded_items"
+                        ] = layerrecord.expandedLegendItems
+                    if layerrecord.usingLegendItems:
+                        maptheme_item[layername][
+                            "checked_items"
+                        ] = layerrecord.checkedLegendItems
+
+                if maptheme_record.hasExpandedStateInfo():
+                    for expanded_groupnode in maptheme_record.expandedGroupNodes():
+                        maptheme_item[expanded_groupnode] = {}
+                        maptheme_item[expanded_groupnode]["expanded"] = True
+                # setHasCheckedStateInfo(True) is not available in the API, what makes it impossible to control the checked state of a group
+                # see https://github.com/SebastienPeillet/QGIS/commit/736e46daa640b8a9c66107b4f05319d6d2534ac5#discussion_r1037225879
+                for checked_groupnode in maptheme_record.checkedGroupNodes():
+                    maptheme_item[checked_groupnode] = {}
+                    maptheme_item[checked_groupnode]["checked"] = True
+
+                self[name] = maptheme_item
+
     def __init__(self):
         QObject.__init__(self)
         self.layertree = self.LayerTreeItem()
+        self.mapthemes = self.MapThemes()
         self.layerorder = []
 
     def parse_project(
@@ -355,5 +400,6 @@ class ProjectTopping(QObject):
         """
         projecttopping_dict = {}
         projecttopping_dict["layertree"] = self.layertree.items_list(target)
+        projecttopping_dict["mapthemes"] = dict(self.mapthemes)
         projecttopping_dict["layerorder"] = self.layerorder
         return projecttopping_dict

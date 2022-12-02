@@ -292,9 +292,11 @@ class ProjectTopping(QObject):
         root = project.layerTreeRoot()
         if root:
             self.layertree.make_item(project, project.layerTreeRoot(), export_settings)
-            self.layerorder = (
+            layerorder_layers = (
                 root.customLayerOrder() if root.hasCustomLayerOrder() else []
             )
+            if layerorder_layers:
+                self.layerorder = [layer.name() for layer in layerorder_layers]
             self.stdout.emit(
                 self.tr("QGIS project parsed with export settings."), Qgis.Info
             )
@@ -353,6 +355,5 @@ class ProjectTopping(QObject):
         """
         projecttopping_dict = {}
         projecttopping_dict["layertree"] = self.layertree.items_list(target)
-
-        projecttopping_dict["layerorder"] = [layer.name() for layer in self.layerorder]
+        projecttopping_dict["layerorder"] = self.layerorder
         return projecttopping_dict

@@ -47,6 +47,7 @@ class ProjectTopping(QObject):
     - project variables (future)
     - print layout (future)
     - map themes (future)
+
     QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
     """
 
@@ -223,6 +224,57 @@ class ProjectTopping(QObject):
             layer.saveNamedStyle(temporary_toppingfile_path, categories)
             return temporary_toppingfile_path
 
+        def item_dict(self, target: Target):
+            item_dict = {}
+            item_properties_dict = {}
+
+            if self.properties.group:
+                item_properties_dict["group"] = True
+                if self.properties.mutually_exclusive:
+                    item_properties_dict["mutually-exclusive"] = True
+                    item_properties_dict[
+                        "mutually-exclusive-child"
+                    ] = self.properties.mutually_exclusive_child
+            else:
+                if self.properties.tablename:
+                    item_properties_dict["tablename"] = self.properties.tablename
+                    if self.properties.geometrycolumn:
+                        item_properties_dict[
+                            "geometrycolumn"
+                        ] = self.properties.geometrycolumn
+                if self.properties.featurecount:
+                    item_properties_dict["featurecount"] = True
+                if self.properties.qmlstylefile:
+                    item_properties_dict["qmlstylefile"] = target.toppingfile_link(
+                        ProjectTopping.LAYERSTYLE_TYPE, self.properties.qmlstylefile
+                    )
+                if self.properties.provider and self.properties.uri:
+                    item_properties_dict["provider"] = self.properties.provider
+                    item_properties_dict["uri"] = self.properties.uri
+
+            item_properties_dict["checked"] = self.properties.checked
+            item_properties_dict["expanded"] = self.properties.expanded
+
+            if self.properties.definitionfile:
+                item_properties_dict["definitionfile"] = target.toppingfile_link(
+                    ProjectTopping.LAYERDEFINITION_TYPE,
+                    self.properties.definitionfile,
+                )
+
+            if self.items:
+                child_item_dict_list = self.items_list(target)
+                item_properties_dict["child-nodes"] = child_item_dict_list
+
+            item_dict[self.name] = item_properties_dict
+            return item_dict
+
+        def items_list(self, target: Target):
+            item_list = []
+            for item in self.items:
+                item_dict = item.item_dict(target)
+                item_list.append(item_dict)
+            return item_list
+
     def __init__(self):
         QObject.__init__(self)
         self.layertree = self.LayerTreeItem()
@@ -295,65 +347,12 @@ class ProjectTopping(QObject):
 
     def _projecttopping_dict(self, target: Target):
         """
-        Creates the layertree as a dict.
-        Creates the layerorder as a list.
+        Gets the layertree as a list of dicts.
+        Gets the layerorder as a list.
         And it generates and stores the toppingfiles according th the Target.
         """
         projecttopping_dict = {}
-        projecttopping_dict["layertree"] = self._item_dict_list(
-            target, self.layertree.items
-        )
+        projecttopping_dict["layertree"] = self.layertree.items_list(target)
+
         projecttopping_dict["layerorder"] = [layer.name() for layer in self.layerorder]
         return projecttopping_dict
-
-    def _item_dict_list(self, target: Target, items):
-        item_dict_list = []
-        print([item.name for item in items])
-        for item in items:
-            item_dict = self._create_item_dict(target, item)
-            item_dict_list.append(item_dict)
-        return item_dict_list
-
-    def _create_item_dict(self, target: Target, item: LayerTreeItem):
-        item_dict = {}
-        item_properties_dict = {}
-
-        if item.properties.group:
-            item_properties_dict["group"] = True
-            if item.properties.mutually_exclusive:
-                item_properties_dict["mutually-exclusive"] = True
-                item_properties_dict[
-                    "mutually-exclusive-child"
-                ] = item.properties.mutually_exclusive_child
-        else:
-            if item.properties.tablename:
-                item_properties_dict["tablename"] = item.properties.tablename
-                if item.properties.geometrycolumn:
-                    item_properties_dict[
-                        "geometrycolumn"
-                    ] = item.properties.geometrycolumn
-            if item.properties.featurecount:
-                item_properties_dict["featurecount"] = True
-            if item.properties.qmlstylefile:
-                item_properties_dict["qmlstylefile"] = target.toppingfile_link(
-                    ProjectTopping.LAYERSTYLE_TYPE, item.properties.qmlstylefile
-                )
-            if item.properties.provider and item.properties.uri:
-                item_properties_dict["provider"] = item.properties.provider
-                item_properties_dict["uri"] = item.properties.uri
-
-        item_properties_dict["checked"] = item.properties.checked
-        item_properties_dict["expanded"] = item.properties.expanded
-
-        if item.properties.definitionfile:
-            item_properties_dict["definitionfile"] = target.toppingfile_link(
-                ProjectTopping.LAYERDEFINITION_TYPE,
-                item.properties.definitionfile,
-            )
-
-        if item.items:
-            child_item_dict_list = self._item_dict_list(target, item.items)
-            item_properties_dict["child-nodes"] = child_item_dict_list
-
-        item_dict[item.name] = item_properties_dict
-        return item_dict

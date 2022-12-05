@@ -171,10 +171,14 @@ class ToppingMakerTest(unittest.TestCase):
 
         countchecked = 0
 
-        # there should be 13 toppingfiles: one project topping, and 2 x 6 toppingfiles of the layers (since the layers are multiple times in the tree)
-        assert len(target.toppingfileinfo_list) == 13
+        # there should be 13 toppingfiles:
+        # - one project topping
+        # - 2 x 3 qlr files (two times since the layers are multiple times in the tree)
+        # - 2 x 6 qml files (one layers with 3 styles, one layer with 2 styles and one layer with one style - and two times since the layers are multiple times in the tree)
+        assert len(target.toppingfileinfo_list) == 19
 
         for toppingfileinfo in target.toppingfileinfo_list:
+            print(toppingfileinfo["path"])
             assert "path" in toppingfileinfo
             assert "type" in toppingfileinfo
 
@@ -185,7 +189,22 @@ class ToppingMakerTest(unittest.TestCase):
                 countchecked += 1
             if (
                 toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_one_french_1.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_one_robot_1.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
                 == "freddys_projects/this_specific_project/layerstyle/freddys_layer_three.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_three_french_3.qml"
             ):
                 countchecked += 1
             if (
@@ -209,7 +228,7 @@ class ToppingMakerTest(unittest.TestCase):
             ):
                 countchecked += 1
 
-        assert countchecked == 12
+        assert countchecked == 18
 
     def test_custom_path_resolver(self):
         # load QGIS project into structure

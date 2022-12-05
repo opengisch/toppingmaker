@@ -347,7 +347,7 @@ class ProjectTopping(QObject):
         ):
             self.clear()
 
-            maptheme_collection = QgsProject.instance().mapThemeCollection()
+            maptheme_collection = project.mapThemeCollection()
             for name in export_settings.mapthemes:
                 maptheme_item = {}
                 maptheme_record = maptheme_collection.mapThemeState(name)
@@ -396,14 +396,25 @@ class ProjectTopping(QObject):
         """
         root = project.layerTreeRoot()
         if root:
+            # make layertree
             self.layertree.make_item(project, project.layerTreeRoot(), export_settings)
+            self.stdout.emit(
+                self.tr("QGIS project layertree parsed with export settings."),
+                Qgis.Info,
+            )
+            # make layerorder
             layerorder_layers = (
                 root.customLayerOrder() if root.hasCustomLayerOrder() else []
             )
             if layerorder_layers:
                 self.layerorder = [layer.name() for layer in layerorder_layers]
+            self.stdout.emit(self.tr("QGIS project layerorder parsed."), Qgis.Info)
+            # make mapthemes
+            self.mapthemes.make_items(project, export_settings)
+
             self.stdout.emit(
-                self.tr("QGIS project parsed with export settings."), Qgis.Info
+                self.tr("QGIS project map themes parsed with export settings."),
+                Qgis.Info,
             )
         else:
             self.stdout.emit(

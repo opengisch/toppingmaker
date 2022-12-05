@@ -25,6 +25,8 @@ from qgis.core import QgsLayerTreeGroup, QgsLayerTreeLayer
 
 class ExportSettings(object):
     """
+    # Layertree:
+
     The requested export settings of each node in the specific dicts:
     - qmlstyle_setting_nodes
     - definition_setting_nodes
@@ -58,6 +60,11 @@ class ExportSettings(object):
         ("Node2","french"): { export: True, categories: <QgsMapLayer.StyleCategories> },
         ("Node2","robot"): { export: True, categories: <QgsMapLayer.StyleCategories> }
     }
+
+    # Mapthemes:
+
+    The map themes to export are a simple list of map theme names stored in `mapthemes`.
+
     """
 
     class ToppingType(Enum):
@@ -66,11 +73,11 @@ class ExportSettings(object):
         SOURCE = 3
 
     def __init__(self):
-        # layertree settings
+        # layertree settings per layer / group and type of export
         self.qmlstyle_setting_nodes = {}
         self.definition_setting_nodes = {}
         self.source_setting_nodes = {}
-        # maptheme settings
+        # list of mapthemes to be exported
         self.mapthemes = []
 
     def set_setting_values(

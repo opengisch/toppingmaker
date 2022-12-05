@@ -119,7 +119,7 @@ class ExportSettings(object):
         setting = setting_nodes.get(key, {})
         if not setting:
             key = self._name_key(name, style)
-            setting = setting = setting_nodes.get(key, {})
+            setting = setting_nodes.get(key, {})
         return setting
 
     def _set_setting(

@@ -62,6 +62,16 @@ class ProjectTopping(QObject):
         The properties of a node (tree item)
         """
 
+        class StyleItemProperties(object):
+            """
+            The properties of a style item of a node style.
+            Currently it's only a qmlstylefile. Maybe in future here a style can be defined.
+            """
+
+            def __init__(self):
+                # the style file - if None then not requested
+                self.qmlstylefile = None
+
         def __init__(self):
             # if the node is a group
             self.group = False
@@ -87,6 +97,8 @@ class ProjectTopping(QObject):
             self.tablename = None
             # the geometry column (if no source available)
             self.geometrycolumn = None
+            # the styles can contain multiple style items with StyleItemProperties
+            self.styles = {}
 
     class LayerTreeItem(object):
         """
@@ -177,19 +189,54 @@ class ProjectTopping(QObject):
                                 provider.dataSourceUri().split("layername=")[1].strip()
                             )
 
-                qml_setting = export_settings.get_setting(
+                # get the default style
+                qml_default_setting = export_settings.get_setting(
                     ExportSettings.ToppingType.QMLSTYLE, node, node.name()
+                ) or export_settings.get_setting(
+                    ExportSettings.ToppingType.QMLSTYLE, node, node.name(), "default"
                 )
-                if qml_setting.get("export", False):
+
+                if qml_default_setting.get("export", False):
                     self.properties.qmlstylefile = self._temporary_qmlstylefile(
                         layer,
                         QgsMapLayer.StyleCategory(
-                            qml_setting.get(
+                            qml_default_setting.get(
                                 "categories",
                                 QgsMapLayer.StyleCategory.AllStyleCategories,
                             )
                         ),
                     )
+
+                # get all the other styles
+                current_style = layer.styleManager().currentStyle()
+                for style_name in layer.styleManager().styles():
+                    # we skip the 'default' style because it's handled above
+                    if style_name == "default":
+                        continue
+
+                    qml_style_setting = export_settings.get_setting(
+                        ExportSettings.ToppingType.QMLSTYLE,
+                        node,
+                        node.name(),
+                        style_name,
+                    )
+                    if qml_style_setting.get("export", False):
+                        style_properties = (
+                            ProjectTopping.TreeItemProperties.StyleItemProperties()
+                        )
+                        style_properties.qmlstylefile = self._temporary_qmlstylefile(
+                            layer,
+                            QgsMapLayer.StyleCategory(
+                                qml_style_setting.get(
+                                    "categories",
+                                    QgsMapLayer.StyleCategory.AllStyleCategories,
+                                )
+                            ),
+                            style_name,
+                        )
+                        self.properties.styles[style_name] = style_properties
+                # reset the style of the project layer
+                layer.styleManager().setCurrentStyle(current_style)
 
         def _layer_of_node(
             self,
@@ -215,12 +262,15 @@ class ProjectTopping(QObject):
             self,
             layer: QgsMapLayer,
             categories: QgsMapLayer.StyleCategories = QgsMapLayer.StyleCategory.AllStyleCategories,
+            style_name: str = None,
         ):
-            filename_slug = f"{slugify(self.name)}.qml"
+            filename_slug = f"{slugify(self.name)}{f'_{slugify(style_name)}' if style_name else ''}.qml"
             os.makedirs(self.temporary_toppingfile_dir, exist_ok=True)
             temporary_toppingfile_path = os.path.join(
                 self.temporary_toppingfile_dir, filename_slug
             )
+            if style_name:
+                layer.styleManager().setCurrentStyle(style_name)
             layer.saveNamedStyle(temporary_toppingfile_path, categories)
             return temporary_toppingfile_path
 
@@ -248,6 +298,16 @@ class ProjectTopping(QObject):
                     item_properties_dict["qmlstylefile"] = target.toppingfile_link(
                         ProjectTopping.LAYERSTYLE_TYPE, self.properties.qmlstylefile
                     )
+                if self.properties.styles:
+                    item_properties_dict["styles"] = {}
+                    for style_name in self.properties.styles.keys():
+                        item_properties_dict["styles"][style_name] = {}
+                        item_properties_dict["styles"][style_name][
+                            "qmlstylefile"
+                        ] = target.toppingfile_link(
+                            ProjectTopping.LAYERSTYLE_TYPE,
+                            self.properties.styles[style_name].qmlstylefile,
+                        )
                 if self.properties.provider and self.properties.uri:
                     item_properties_dict["provider"] = self.properties.provider
                     item_properties_dict["uri"] = self.properties.uri

@@ -52,6 +52,8 @@ class ToppingMakerTest(unittest.TestCase):
 
     def test_parse_project(self):
         """
+        Parse it without export settings...
+
         "Big Group":
             group: True
             child-nodes:
@@ -83,6 +85,7 @@ class ToppingMakerTest(unittest.TestCase):
         project_topping = ProjectTopping()
         project_topping.parse_project(project)
 
+        # check layertree
         checked_groups = []
         for item in project_topping.layertree.items:
             if item.name == "Big Group":
@@ -97,6 +100,37 @@ class ToppingMakerTest(unittest.TestCase):
                                 assert len(item.items) == 2
                                 checked_groups.append("Small Group")
         assert checked_groups == ["Big Group", "Medium Group", "Small Group"]
+
+    def test_parse_project_with_mapthemes(self):
+        """
+        Parse it without export settings defining map themes.
+        """
+        project, export_settings = self._make_project_and_export_settings()
+
+        project_topping = ProjectTopping()
+        project_topping.parse_project(project, export_settings)
+
+        # check mapthemes
+        mapthemes = project_topping.mapthemes
+        assert mapthemes["Robot Theme"]["Layer One"]
+        assert mapthemes["Robot Theme"]["Layer One"]["style"] == "robot 1"
+        assert mapthemes["Robot Theme"]["Layer Three"]
+        assert mapthemes["Robot Theme"]["Layer Three"]["style"] == "robot 3"
+        assert mapthemes["Robot Theme"]["Small Group"]
+        assert mapthemes["Robot Theme"]["Small Group"]["expanded"]
+        assert mapthemes["Robot Theme"]["Big Group"]
+        assert mapthemes["Robot Theme"]["Big Group"]["expanded"]
+        assert "Medium Group" not in mapthemes["Robot Theme"]
+
+        assert set(mapthemes.keys()) == {"French Theme", "Robot Theme"}
+        assert mapthemes["French Theme"]["Layer One"]
+        assert mapthemes["French Theme"]["Layer One"]["style"] == "french 1"
+        assert mapthemes["French Theme"]["Layer Three"]
+        assert mapthemes["French Theme"]["Layer Three"]["style"] == "french 3"
+        assert mapthemes["French Theme"]["Medium Group"]
+        assert mapthemes["French Theme"]["Medium Group"]["expanded"]
+        assert "Small Group" not in mapthemes["French Theme"]
+        assert "Big Group" not in mapthemes["French Theme"]
 
     def test_generate_files(self):
         project, export_settings = self._make_project_and_export_settings()
@@ -130,7 +164,8 @@ class ToppingMakerTest(unittest.TestCase):
             target.main_dir, project_topping.generate_files(target)
         )
 
-        # check projecttopping_file
+        # check layertree projecttopping_file
+
         foundAllofEm = False
         foundLayerOne = False
         foundLayerTwo = False
@@ -155,6 +190,172 @@ class ToppingMakerTest(unittest.TestCase):
         assert foundAllofEm
         assert foundLayerOne
         assert foundLayerTwo
+
+        # check mapthemes in projecttopping_file
+
+        foundFrenchTheme = False
+        foundRobotTheme = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "mapthemes" in projecttopping_data
+            assert projecttopping_data["mapthemes"]
+            for theme_name in projecttopping_data["mapthemes"].keys():
+                if theme_name == "Robot Theme":
+                    foundRobotTheme = True
+                    expected_records = {
+                        "Layer One",
+                        "Layer Three",
+                        "Small Group",
+                        "Big Group",
+                    }
+                    assert expected_records == set(
+                        projecttopping_data["mapthemes"]["Robot Theme"].keys()
+                    )
+                    checked_record_count = 0
+                    for record_name in projecttopping_data["mapthemes"][
+                        "Robot Theme"
+                    ].keys():
+                        if record_name == "Layer One":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]["style"]
+                                == "robot 1"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert not projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Layer One"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Layer Three":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]["style"]
+                                == "robot 3"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Layer Three"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Small Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Small Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Small Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                        if record_name == "Big Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Big Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Big Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                    assert checked_record_count == 4
+                if theme_name == "French Theme":
+                    foundFrenchTheme = True
+                    expected_records = {"Layer One", "Layer Three", "Medium Group"}
+                    assert expected_records == set(
+                        projecttopping_data["mapthemes"]["French Theme"].keys()
+                    )
+                    checked_record_count = 0
+                    for record_name in projecttopping_data["mapthemes"][
+                        "French Theme"
+                    ].keys():
+                        if record_name == "Layer One":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]["style"]
+                                == "french 1"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["French Theme"][
+                                "Layer One"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Layer Three":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]["style"]
+                                == "french 3"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert not projecttopping_data["mapthemes"]["French Theme"][
+                                "Layer Three"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Medium Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Medium Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["French Theme"][
+                                "Medium Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                    assert checked_record_count == 3
+
+        assert foundFrenchTheme
+        assert foundRobotTheme
 
         # check toppingfiles
 
@@ -363,6 +564,7 @@ class ToppingMakerTest(unittest.TestCase):
         map_theme_layer_record.isVisible = True
         map_theme_record.addLayerRecord(map_theme_layer_record)
         # group Big and Small expanded, Medium not expanded
+        map_theme_record.setHasExpandedStateInfo(True)
         map_theme_record.setExpandedGroupNodes(["Small Group", "Big Group"])
         project.mapThemeCollection().insert("Robot Theme", map_theme_record)
 
@@ -382,6 +584,7 @@ class ToppingMakerTest(unittest.TestCase):
         map_theme_layer_record.isVisible = False
         map_theme_record.addLayerRecord(map_theme_layer_record)
         # group Medium expanded, Big and Small not expanded
+        map_theme_record.setHasExpandedStateInfo(True)
         map_theme_record.setExpandedGroupNodes(["Medium Group"])
         project.mapThemeCollection().insert("French Theme", map_theme_record)
 

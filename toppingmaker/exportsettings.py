@@ -80,30 +80,30 @@ class ExportSettings(object):
         name: str = None,
         export=True,
         categories=None,
-        style: str = None,
+        style_name: str = None,
     ) -> bool:
         """
         Appends the values (export, categories) to an existing setting
         """
         setting_nodes = self._setting_nodes(type)
-        setting = self._get_setting(setting_nodes, node, name, style)
+        setting = self._get_setting(setting_nodes, node, name, style_name)
         setting["export"] = export
         if categories:
             setting["categories"] = categories
-        return self._set_setting(setting_nodes, setting, node, name, style)
+        return self._set_setting(setting_nodes, setting, node, name, style_name)
 
     def get_setting(
         self,
         type: ToppingType,
         node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None,
         name: str = None,
-        style: str = None,
+        style_name: str = None,
     ) -> dict():
         """
         Returns an existing or an empty setting dict
         """
         setting_nodes = self._setting_nodes(type)
-        return self._get_setting(setting_nodes, node, name, style)
+        return self._get_setting(setting_nodes, node, name, style_name)
 
     def _setting_nodes(self, type: ToppingType):
         if type == ExportSettings.ToppingType.QMLSTYLE:
@@ -113,39 +113,39 @@ class ExportSettings(object):
         if type == ExportSettings.ToppingType.SOURCE:
             return self.source_setting_nodes
 
-    def _get_setting(self, setting_nodes, node=None, name=None, style=None):
+    def _get_setting(self, setting_nodes, node=None, name=None, style_name=None):
         # check for a setting according to the node if available and if no setting found, do it with the name.
-        key = self._node_key(node, style)
+        key = self._node_key(node, style_name)
         setting = setting_nodes.get(key, {})
         if not setting:
-            key = self._name_key(name, style)
+            key = self._name_key(name, style_name)
             setting = setting_nodes.get(key, {})
         return setting
 
     def _set_setting(
-        self, setting_nodes, setting, node=None, name=None, style=None
+        self, setting_nodes, setting, node=None, name=None, style_name=None
     ) -> bool:
         # get a key according to the node if available otherwise do it with the name.
-        key = self._node_key(node, style) or self._name_key(name, style)
+        key = self._node_key(node, style_name) or self._name_key(name, style_name)
         if key:
             setting_nodes[key] = setting
             return True
         return False
 
-    def _node_key(self, node=None, style=None):
+    def _node_key(self, node=None, style_name=None):
         # creates a key according to the available node.
         if node:
-            if style:
-                return (node.name(), style)
+            if style_name:
+                return (node.name(), style_name)
             else:
                 return node
         return None
 
-    def _name_key(self, name=None, style=None):
+    def _name_key(self, name=None, style_name=None):
         # creates a key according to the available name.
         if name:
-            if style:
-                return (name, style)
+            if style_name:
+                return (name, style_name)
             else:
                 return name
         return None

@@ -99,11 +99,15 @@ The structure is exported. But not any additional files. For that, we need to pa
 
 ### Create the `ExportSettings`:
 
-Use `QMLSTYLE` for the export of the qml stylefile.
-Use `DEFINITION` to export the qlr definition file.
-USE `SOURCE` to store the source in the YAML tree.
+#### Layer Tree Settings
 
-The QgsLayerTreeNode or the layername can be used as key.
+We can decide for every layer (group) if we want to:
+
+- Use `QMLSTYLE` for the export of the qml stylefile.
+- Use `DEFINITION` to export the qlr definition file.
+- USE `SOURCE` to store the source in the YAML tree.
+
+The `QgsLayerTreeNode` or the layername can be used as key.
 
 ```py
 export_settings = ExportSettings()
@@ -131,10 +135,33 @@ export_settings.set_setting_values(
 )
 ```
 
-### Generate the Files for a `ProjectTopping` containing `ExportSetting`
-When parsing the QgsProject we need to pass the `ExportSettings`:
+Without an additional setting, only the default style is considered. To export the style of multiple style add them as seperate setting entries:
+
+```py
+# default style (if style_name "default" is added, it makes no difference)
+export_settings.set_setting_values(
+    type = ExportSettings.ToppingType.QMLSTYLE, node = None, name = "Street", export = True )
+)
+# french style (e.g. french aliases)
+export_settings.set_setting_values(
+    type = ExportSettings.ToppingType.QMLSTYLE, node = None, name = "Street", export = True, categories = category_flags, style_name = "french" )
+)
+# robot style (e.g. technical look)
+export_settings.set_setting_values(
+    type = ExportSettings.ToppingType.QMLSTYLE, node = None, name = "Street", export = True, categories = category_flags, style_name = "robot" )
+)
 ```
 
+#### Map Themes Settings
+
+Set the names of the map themes that should be considered as a list:
+```py
+export_settings.mapthemes = ["Robot Theme", "French Theme"]
+```
+
+### Generate the Files for a `ProjectTopping` containing `ExportSetting`
+When parsing the QgsProject we need to pass the `ExportSettings`:
+```py
 project_topping.parse_project(project, export_settings)
 project_topping.generate_files(target)
 ```
@@ -149,47 +176,91 @@ repo
     └── projecttopping
         └── freddys_qgis_project.yaml
     └── layerstyle
-        └── freddys_qgis_project_street.qml
+        ├── freddys_qgis_project_street.qml
+        ├── freddys_qgis_project_street_french.qml
+        └── freddys_qgis_project_street_robot.qml
 ```
 
 And the YAML looks like this:
 
 ```yaml
-layerorder: []
 layertree:
-- Street:
-    tablename: street
-    geometrycolumn: geometry
-    checked: true
-    expanded: true
-    stylefile: freddys_qgis_topping/layerstyle/freddys_qgis_project_street.qml
-- Park:
-    tablename: park
-    geometrycolumn: geometry
-    checked: false
-    expanded: true
-    provider: ogr
-    uri: /home/freddy/qgis_projects/bakery/cityandcity.gpkg|layername=park
-- Building:
-    tablename: building_2
-    geometrycolumn: geometry
-    checked: true
-    expanded: true
-- Info Layers:
-    checked: true
-    definitionfile: freddys_qgis_topping/layerdefinition/freddys_qgis_project_info_layers.qlr
-    expanded: true
-    group: true
-- Background:
-    checked: true
-    child-nodes:
-    expanded: true
-    group: true
-    - Landeskarten (grau):
-        checked: true
-        expanded: true
-        provider: wms
-        uri: contextualWMSLegend=0&crs=EPSG:2056&dpiMode=7&featureCount=10&format=image/jpeg&layers=ch.swisstopo.pixelkarte-grau&styles&url=https://wms.geo.admin.ch/?%0ASERVICE%3DWMS%0A%26VERSION%3D1.3.0%0A%26REQUEST%3DGetCapabilities
+  - Street:
+      tablename: street
+      geometrycolumn: geometry
+      checked: true
+      expanded: true
+      qmlstylefile: freddys_qgis_topping/layerstyle/freddys_qgis_project_street.qml
+      styles:
+        french:
+          qmlstylefile: freddys_qgis_topping/layerstyle/freddys_qgis_project_street_french.qml
+        robot:
+          qmlstylefile: freddys_qgis_topping/layerstyle/freddys_qgis_project_street_robot.qml
+  - Park:
+      tablename: park
+      geometrycolumn: geometry
+      checked: false
+      expanded: true
+      provider: ogr
+      uri: /home/freddy/qgis_projects/bakery/cityandcity.gpkg|layername=park
+  - Building:
+      tablename: building_2
+      geometrycolumn: geometry
+      checked: true
+      expanded: true
+  - Info Layers:
+      checked: true
+      definitionfile: freddys_qgis_topping/layerdefinition/freddys_qgis_project_info_layers.qlr
+      expanded: true
+      group: true
+  - Background:
+      checked: true
+      expanded: true
+      group: true
+      child-nodes:
+        - Landeskarten (grau):
+            checked: true
+            expanded: true
+            provider: wms
+            uri: contextualWMSLegend=0&crs=EPSG:2056&dpiMode=7&featureCount=10&format=image/jpeg&layers=ch.swisstopo.pixelkarte-grau&styles&url=https://wms.geo.admin.ch/?%0ASERVICE%3DWMS%0A%26VERSION%3D1.3.0%0A%26REQUEST%3DGetCapabilities
+
+mapthemes:
+  "French Theme":
+    Street:
+      style: french
+      visible: true
+      expanded: true
+    Buildings:
+      style: default
+      visible: false
+      expanded: true
+  "Robot Theme":
+    Street:
+      style: robot
+      expanded_items:
+        [
+          "{f6c29bf7-af28-4d88-8092-ee9568ac731f}",
+          "{fc48a8d7-d774-46c7-97c7-74ecde13a3ec}",
+        ]
+      checked_items:
+        [
+          "{f6c29bf7-af28-4d88-8092-ee9568ac731f}",
+          "{dc726dd5-d0d7-4275-be02-f6916df4fa29}",
+        ]
+    Buildings:
+      style: default
+      visible: true
+      expanded: false
+    Other_Layers_Group:
+      group: true
+      checked: true
+      expanded: false
+    Other_Layers_Group/SubGroup:
+      group: true
+      checked: true
+      expanded: false
+
+layerorder: []
 ```
 
 ## Most important functions
@@ -197,10 +268,10 @@ layertree:
 A project configuration resulting in a YAML file that contains:
 - layertree
 - layerorder
+- layer styles
+- map themes
 - project variables (future)
 - print layout (future)
-- layer styles (future)
-- map themes (future)
 
 QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
 
@@ -250,14 +321,17 @@ A member variable `toppingfileinfo_list = []` is defined, to store all the infor
 
 ### exportsettings.ExportSettings
 
+#### Layertree Settings
 The requested export settings of each node in the specific dicts:
 - qmlstyle_setting_nodes
 - definition_setting_nodes
 - source_setting_nodes
 
+
 The usual structure is using QgsLayerTreeNode as key and then export True/False
 
 ```py
+qmlstyle_nodes =
 {
     <QgsLayerTreeNode(Node1)>: { export: False }
     <QgsLayerTreeNode(Node2)>: { export: True }
@@ -268,6 +342,7 @@ Alternatively the layername can be used as key. In ProjectTopping it first looks
 Using the node is much more consistent, since one can use layers with the same name, but for nodes you need the project already in advance.
 With name you can use prepared settings to pass (before the project exists) e.g. in automated workflows.
 ```py
+qmlstyle_nodes =
 {
     "Node1": { export: False }
     "Node2": { export: True }
@@ -283,7 +358,18 @@ qmlstyle_nodes =
 }
 ```
 
-#### `set_setting_values( type: ToppingType, node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None, name: str = None, export=True categories=None, ) -> bool`
+If styles are used as well we create tuples as key. Mutable objects are not alowed in it, so they would be created with the (layer) name and the style (name):
+```py
+qmlstyle_nodes =
+{
+    <QgsLayerTreeNode(Node1)>: { export: False }
+    <QgsLayerTreeNode(Node2)>: { export: True, categories: <QgsMapLayer.StyleCategories> }
+    ("Node2","french"): { export: True, categories: <QgsMapLayer.StyleCategories> },
+    ("Node2","robot"): { export: True, categories: <QgsMapLayer.StyleCategories> }
+}
+```
+
+##### `set_setting_values( type: ToppingType, node: Union[QgsLayerTreeLayer, QgsLayerTreeGroup] = None, name: str = None, export=True categories=None, style_name: str = None) -> bool`
 
 Set the specific types concerning the enumerations:
 ```py
@@ -293,6 +379,9 @@ class ToppingType(Enum):
     SOURCE = 3
 
 ```
+#### Map Themes Settings
+
+The export setting of the map themes is a simple list of maptheme names: `mapthemes = []`
 
 ## Infos for Devs
 

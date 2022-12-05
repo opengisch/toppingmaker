@@ -24,7 +24,7 @@ import os
 import tempfile
 
 import yaml
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsMapThemeCollection, QgsProject, QgsVectorLayer
 from qgis.testing import unittest
 
 from toppingmaker import ExportSettings, ProjectTopping, Target
@@ -283,6 +283,21 @@ class ToppingMakerTest(unittest.TestCase):
         )
         assert l5.isValid()
 
+        # append style to layer one and three
+        style_manager = l1.styleManager()
+        l1.setDisplayExpression("'French:'||'un'")
+        style_manager.addStyleFromLayer("french 1")
+        l1.setDisplayExpression("'Robot:'||'0001'")
+        style_manager.addStyleFromLayer("robot 1")
+        style_manager.setCurrentStyle("default")
+
+        style_manager = l3.styleManager()
+        l3.setDisplayExpression("'French:'||'trois'")
+        style_manager.addStyleFromLayer("french 3")
+        l3.setDisplayExpression("'Robot:'||'0011'")
+        style_manager.addStyleFromLayer("robot 3")
+        style_manager.setCurrentStyle("default")
+
         project.addMapLayer(l1, False)
         project.addMapLayer(l2, False)
         project.addMapLayer(l3, False)
@@ -306,12 +321,83 @@ class ToppingMakerTest(unittest.TestCase):
         allofemgroup.addLayer(l4)
         allofemgroup.addLayer(l5)
 
+        # create a map theme from the current state
+        # crashes on getting the model - check it out later dave
+        # layertree_root = project.layerTreeRoot()
+        # layertree_model = QgsLayerTreeModel(layertree_root)
+        # map_theme_record = QgsMapThemeCollection.createThemeFromCurrentState(layertree_root,layertree_model)
+        # project.mapThemeCollection().insert("General Theme", map_theme_record)
+
+        # create robot map theme
+        # with styles and layer one unchecked
+        map_theme_record = QgsMapThemeCollection.MapThemeRecord()
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l1)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "robot 1"
+        map_theme_layer_record.isVisible = False
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l3)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "robot 3"
+        map_theme_layer_record.isVisible = True
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        # group Big and Small expanded, Medium not expanded
+        map_theme_record.setExpandedGroupNodes(["Small Group", "Big Group"])
+        project.mapThemeCollection().insert("Robot Theme", map_theme_record)
+
+        # create french map theme
+        # with styles and layer three unchecked
+        map_theme_record = QgsMapThemeCollection.MapThemeRecord()
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l1)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "french 1"
+        map_theme_layer_record.isVisible = True
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l3)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "french 3"
+        map_theme_layer_record.isVisible = False
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        # group Medium expanded, Big and Small not expanded
+        map_theme_record.setExpandedGroupNodes(["Medium Group"])
+        project.mapThemeCollection().insert("French Theme", map_theme_record)
+
         export_settings = ExportSettings()
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer One", True
         )
+        # exporting "french" and "robot" style to layer one
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer One",
+            True,
+            None,
+            "french 1",
+        )
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer One",
+            True,
+            None,
+            "robot 1",
+        )
+        # only exporting "french" style to layer three
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer Three", True
+        )
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer Three",
+            True,
+            None,
+            "french 3",
         )
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer Five", True
@@ -336,10 +422,15 @@ class ToppingMakerTest(unittest.TestCase):
         export_settings.set_setting_values(
             ExportSettings.ToppingType.SOURCE, None, "Layer Three", True
         )
+        # define the map themes to export
+        export_settings.mapthemes = ["French Theme", "Robot Theme"]
 
-        print(export_settings.qmlstyle_setting_nodes)
-        print(export_settings.definition_setting_nodes)
-        print(export_settings.source_setting_nodes)
+        print(f" Layer to style export: {export_settings.qmlstyle_setting_nodes}")
+        print(
+            f" Layer to definition export: {export_settings.definition_setting_nodes}"
+        )
+        print(f" Layer to source export: {export_settings.source_setting_nodes}")
+        print(f" Map Themes to export: {export_settings.mapthemes}")
         return project, export_settings
 
     def print_info(self, text):

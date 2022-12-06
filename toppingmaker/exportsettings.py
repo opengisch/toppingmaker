@@ -65,6 +65,14 @@ class ExportSettings(object):
 
     The map themes to export are a simple list of map theme names stored in `mapthemes`.
 
+    # Custom Project Variables:
+
+    The custom variables to export are a simple list of the keys stored in `custom_variables`.
+
+    # Layouts:
+
+    The print layouts to export are a simple list of layout names stored in `layouts`.
+
     """
 
     class ToppingType(Enum):
@@ -77,8 +85,12 @@ class ExportSettings(object):
         self.qmlstyle_setting_nodes = {}
         self.definition_setting_nodes = {}
         self.source_setting_nodes = {}
-        # list of mapthemes to be exported
+        # names of mapthemes to be exported
         self.mapthemes = []
+        # keys of custom variables to be exported
+        self.custom_variables = []
+        # names of layouts
+        self.layouts = []
 
     def set_setting_values(
         self,

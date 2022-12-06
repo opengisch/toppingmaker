@@ -25,12 +25,14 @@ import yaml
 from qgis.core import (
     Qgis,
     QgsDataSourceUri,
+    QgsExpressionContextUtils,
     QgsLayerDefinition,
     QgsLayerTreeGroup,
     QgsLayerTreeLayer,
     QgsLayerTreeNode,
     QgsMapLayer,
     QgsProject,
+    QgsReadWriteContext,
 )
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
@@ -56,6 +58,7 @@ class ProjectTopping(QObject):
     PROJECTTOPPING_TYPE = "projecttopping"
     LAYERDEFINITION_TYPE = "layerdefinition"
     LAYERSTYLE_TYPE = "layerstyle"
+    LAYOUTTEMPLATE_TYPE = "layouttemplate"
 
     class TreeItemProperties(object):
         """
@@ -379,11 +382,80 @@ class ProjectTopping(QObject):
 
                 self[name] = maptheme_item
 
+    class Variables(dict):
+        """
+        A dict object of dict items describing a variable according to the variable keys listed in the ExportSettings passed on parsing the QGIS project.
+        """
+
+        def make_items(
+            self,
+            project: QgsProject,
+            export_settings: ExportSettings,
+        ):
+            self.clear()
+            for variable_key in export_settings.custom_variables:
+                self[variable_key] = QgsExpressionContextUtils.projectScope(
+                    project
+                ).variable(variable_key)
+
+    class Layouts(dict):
+        """
+        A dict object of dict items describing a layout with templatefile according to the layout names listed in the ExportSettings passed on parsing the QGIS project.
+        """
+
+        class LayoutItemProperties(object):
+            """
+            The properties of a layout item.
+            Currently it's only a layout  template file. Maybe in future here as well items or whatever can be defined.
+            """
+
+            def __init__(self):
+                # the layout  template file - if None then not requested
+                self.templatefile = None
+
+        def __init__(self):
+            self.temporary_toppingfile_dir = os.path.expanduser("~/.temp_topping_files")
+
+        def make_items(
+            self,
+            project: QgsProject,
+            export_settings: ExportSettings,
+        ):
+            self.clear()
+
+            # go through all the print layouts in the project and export the requested ones
+            for layout in project.layoutManager().printLayouts():
+                if layout.name() in export_settings.layouts:
+                    self[layout.name()] = ProjectTopping.Layouts.LayoutItemProperties()
+
+                    filename_slug = f"{slugify(layout.name())}.qpt"
+                    os.makedirs(self.temporary_toppingfile_dir, exist_ok=True)
+                    temporary_toppingfile_path = os.path.join(
+                        self.temporary_toppingfile_dir, filename_slug
+                    )
+                    # clarify what needs to be set in the QgsReadWriteContext()
+                    layout.saveAsTemplate(
+                        temporary_toppingfile_path, QgsReadWriteContext()
+                    )
+                    self[layout.name()].templatefile = temporary_toppingfile_path
+
+        def items(self, target: Target):
+            resolved_items = {}
+            for layout_name in self.keys():
+                resolved_item = {}
+                resolved_item["templatefile"] = target.toppingfile_link(
+                    ProjectTopping.LAYOUTTEMPLATE_TYPE, self[layout_name].templatefile
+                )
+                resolved_items[layout_name] = resolved_item
+            return resolved_items
+
     def __init__(self):
         QObject.__init__(self)
         self.layertree = self.LayerTreeItem()
         self.mapthemes = self.MapThemes()
         self.layerorder = []
+        self.custom_variables = self.Variables()
+        self.layouts = self.Layouts()
 
     def parse_project(
         self, project: QgsProject, export_settings: ExportSettings = ExportSettings()
@@ -411,6 +483,10 @@ class ProjectTopping(QObject):
             self.stdout.emit(self.tr("QGIS project layerorder parsed."), Qgis.Info)
             # make mapthemes
             self.mapthemes.make_items(project, export_settings)
+            # make variables
+            self.custom_variables.make_items(project, export_settings)
+            # make print layouts
+            self.layouts.make_items(project, export_settings)
 
             self.stdout.emit(
                 self.tr("QGIS project map themes parsed with export settings."),
@@ -472,5 +548,7 @@ class ProjectTopping(QObject):
         projecttopping_dict = {}
         projecttopping_dict["layertree"] = self.layertree.items_list(target)
         projecttopping_dict["mapthemes"] = dict(self.mapthemes)
+        projecttopping_dict["variables"] = dict(self.custom_variables)
+        projecttopping_dict["layouts"] = self.layouts.items(target)
         projecttopping_dict["layerorder"] = self.layerorder
         return projecttopping_dict

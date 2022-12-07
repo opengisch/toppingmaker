@@ -401,17 +401,8 @@ class ProjectTopping(QObject):
     class Layouts(dict):
         """
         A dict object of dict items describing a layout with templatefile according to the layout names listed in the ExportSettings passed on parsing the QGIS project.
+        Such a dict item contains only one key at the moment: "templatefile"
         """
-
-        class LayoutItemProperties(object):
-            """
-            The properties of a layout item.
-            Currently it's only a layout  template file. Maybe in future here as well items or whatever can be defined.
-            """
-
-            def __init__(self):
-                # the layout  template file - if None then not requested
-                self.templatefile = None
 
         def __init__(self):
             self.temporary_toppingfile_dir = os.path.expanduser("~/.temp_topping_files")
@@ -426,7 +417,7 @@ class ProjectTopping(QObject):
             # go through all the print layouts in the project and export the requested ones
             for layout in project.layoutManager().printLayouts():
                 if layout.name() in export_settings.layouts:
-                    self[layout.name()] = ProjectTopping.Layouts.LayoutItemProperties()
+                    self[layout.name()] = {}
 
                     filename_slug = f"{slugify(layout.name())}.qpt"
                     os.makedirs(self.temporary_toppingfile_dir, exist_ok=True)
@@ -437,14 +428,15 @@ class ProjectTopping(QObject):
                     layout.saveAsTemplate(
                         temporary_toppingfile_path, QgsReadWriteContext()
                     )
-                    self[layout.name()].templatefile = temporary_toppingfile_path
+                    self[layout.name()]["templatefile"] = temporary_toppingfile_path
 
         def item_dict(self, target: Target):
             resolved_items = {}
             for layout_name in self.keys():
                 resolved_item = {}
                 resolved_item["templatefile"] = target.toppingfile_link(
-                    ProjectTopping.LAYOUTTEMPLATE_TYPE, self[layout_name].templatefile
+                    ProjectTopping.LAYOUTTEMPLATE_TYPE,
+                    self[layout_name]["templatefile"],
                 )
                 resolved_items[layout_name] = resolved_item
             return resolved_items

@@ -387,13 +387,13 @@ class ProjectTopping(QObject):
                     maptheme_item[layername]["visible"] = layerrecord.isVisible
                     maptheme_item[layername]["expanded"] = layerrecord.expandedLayerNode
                     if layerrecord.expandedLegendItems:
-                        maptheme_item[layername][
-                            "expanded_items"
-                        ] = layerrecord.expandedLegendItems
+                        maptheme_item[layername]["expanded_items"] = list(
+                            layerrecord.expandedLegendItems
+                        )
                     if layerrecord.usingLegendItems:
-                        maptheme_item[layername][
-                            "checked_items"
-                        ] = layerrecord.checkedLegendItems
+                        maptheme_item[layername]["checked_items"] = list(
+                            layerrecord.checkedLegendItems
+                        )
 
                 if maptheme_record.hasExpandedStateInfo():
                     for expanded_groupnode in maptheme_record.expandedGroupNodes():

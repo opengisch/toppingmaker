@@ -67,7 +67,7 @@ class ExportSettings(object):
 
     # Custom Project Variables:
 
-    The custom variables to export are a simple list of the keys stored in `custom_variables`.
+    The custom variables to export are a simple list of the keys stored in `variables`.
 
     # Layouts:
 
@@ -88,7 +88,7 @@ class ExportSettings(object):
         # names of mapthemes to be exported
         self.mapthemes = []
         # keys of custom variables to be exported
-        self.custom_variables = []
+        self.variables = []
         # names of layouts
         self.layouts = []
 

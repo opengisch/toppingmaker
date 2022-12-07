@@ -393,7 +393,7 @@ class ProjectTopping(QObject):
             export_settings: ExportSettings,
         ):
             self.clear()
-            for variable_key in export_settings.custom_variables:
+            for variable_key in export_settings.variables:
                 self[variable_key] = QgsExpressionContextUtils.projectScope(
                     project
                 ).variable(variable_key)
@@ -439,7 +439,7 @@ class ProjectTopping(QObject):
                     )
                     self[layout.name()].templatefile = temporary_toppingfile_path
 
-        def items(self, target: Target):
+        def item_dict(self, target: Target):
             resolved_items = {}
             for layout_name in self.keys():
                 resolved_item = {}
@@ -454,7 +454,7 @@ class ProjectTopping(QObject):
         self.layertree = self.LayerTreeItem()
         self.mapthemes = self.MapThemes()
         self.layerorder = []
-        self.custom_variables = self.Variables()
+        self.variables = self.Variables()
         self.layouts = self.Layouts()
 
     def parse_project(
@@ -484,7 +484,7 @@ class ProjectTopping(QObject):
             # make mapthemes
             self.mapthemes.make_items(project, export_settings)
             # make variables
-            self.custom_variables.make_items(project, export_settings)
+            self.variables.make_items(project, export_settings)
             # make print layouts
             self.layouts.make_items(project, export_settings)
 
@@ -543,12 +543,15 @@ class ProjectTopping(QObject):
         """
         Gets the layertree as a list of dicts.
         Gets the layerorder as a list.
+        Gets the mapthemes as a dict.
+        Gets the variables as a dict.
+        Gets the layouts as a dict.
         And it generates and stores the toppingfiles according th the Target.
         """
         projecttopping_dict = {}
         projecttopping_dict["layertree"] = self.layertree.items_list(target)
         projecttopping_dict["mapthemes"] = dict(self.mapthemes)
-        projecttopping_dict["variables"] = dict(self.custom_variables)
-        projecttopping_dict["layouts"] = self.layouts.items(target)
+        projecttopping_dict["variables"] = dict(self.variables)
+        projecttopping_dict["layouts"] = self.layouts.item_dict(target)
         projecttopping_dict["layerorder"] = self.layerorder
         return projecttopping_dict

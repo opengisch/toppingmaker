@@ -141,9 +141,9 @@ class ToppingMakerTest(unittest.TestCase):
         assert "Big Group" not in mapthemes["French Theme"]
 
         # check variables
-        custom_variables = project_topping.custom_variables
-        assert custom_variables.get("First Variable") == "This is a test value."
-        assert custom_variables.get("Variable with Structure") == [
+        variables = project_topping.variables
+        assert variables.get("First Variable") == "This is a test value."
+        assert variables.get("Variable with Structure") == [
             "Not",
             "The",
             "Normal",
@@ -151,7 +151,7 @@ class ToppingMakerTest(unittest.TestCase):
             "Case",
         ]
         # "Another Variable" is in the project but not in the export_settings
-        assert "Another Variable" not in custom_variables
+        assert "Another Variable" not in variables
 
         # check layouts
         layouts = project_topping.layouts
@@ -641,12 +641,6 @@ class ToppingMakerTest(unittest.TestCase):
         allofemgroup.addLayer(l4)
         allofemgroup.addLayer(l5)
 
-        # create a map theme from the current state
-        # layertree_root = project.layerTreeRoot()
-        # layertree_model = QgsLayerTreeModel(layertree_root)
-        # map_theme_record = QgsMapThemeCollection.createThemeFromCurrentState(layertree_root,layertree_model)
-        # project.mapThemeCollection().insert("General Theme", map_theme_record)
-
         # create robot map theme
         # with styles and layer one unchecked
         map_theme_record = QgsMapThemeCollection.MapThemeRecord()
@@ -774,7 +768,7 @@ class ToppingMakerTest(unittest.TestCase):
         export_settings.mapthemes = ["French Theme", "Robot Theme"]
 
         # define the custom variables to export
-        export_settings.custom_variables = ["First Variable", "Variable with Structure"]
+        export_settings.variables = ["First Variable", "Variable with Structure"]
 
         # define the layouts to export
         export_settings.layouts = ["Layout One", "Layout Three"]

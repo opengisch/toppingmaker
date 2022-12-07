@@ -163,14 +163,14 @@ export_settings.mapthemes = ["Robot Theme", "French Theme"]
 
 Set the keys of custom variables that should be considered as a list:
 ```py
-export_settings.custom_variables = ["First Variable", "Another Variable", "Variable with Structure"]
+export_settings.variables = ["First Variable", "Another Variable", "Variable with Structure"]
 ```
 
 #### Print Layout Settings
 
 Set the names of layouts that should be considered (exported as template files) as a list:
 ```py
-export_settings.custom_variables = ["Layout One", "Layout Two"]
+export_settings.variables = ["Layout One", "Layout Two"]
 ```
 
 ### Generate the Files for a `ProjectTopping` containing `ExportSetting`
@@ -399,7 +399,7 @@ The export setting of the map themes is a simple list of maptheme names: `mapthe
 
 #### Custom Project Variables:
 
-The export setting of the custom variables is simple list of the keys stored in `custom_variables = []`.
+The export setting of the custom variables is simple list of the keys stored in `variables = []`.
 
 #### Layouts:
 

@@ -18,7 +18,9 @@
  ***************************************************************************/
 """
 
+import logging
 import os
+import tempfile
 from typing import Union
 
 import yaml
@@ -108,11 +110,13 @@ class ProjectTopping(QObject):
         A tree item of the layer tree. Every item contains the properties of a layer and according the ExportSettings passed on parsing the QGIS project.
         """
 
-        def __init__(self):
+        def __init__(self, temporary_toppingfile_dir=None):
             self.items = []
             self.name = None
             self.properties = ProjectTopping.TreeItemProperties()
-            self.temporary_toppingfile_dir = os.path.expanduser("~/.temp_topping_files")
+            self.temporary_toppingfile_dir = temporary_toppingfile_dir
+            if not self.temporary_toppingfile_dir:
+                self.temporary_toppingfile_dir = tempfile.mkdtemp()
 
         def make_item(
             self,
@@ -140,7 +144,9 @@ class ProjectTopping(QObject):
                     # only consider children, when the group is not exported as DEFINITION
                     index = 0
                     for child in node.children():
-                        item = ProjectTopping.LayerTreeItem()
+                        item = ProjectTopping.LayerTreeItem(
+                            self.temporary_toppingfile_dir
+                        )
                         item.make_item(project, child, export_settings)
                         # set the first checked item as mutually exclusive child
                         if (
@@ -258,7 +264,15 @@ class ProjectTopping(QObject):
             temporary_toppingfile_path = os.path.join(
                 self.temporary_toppingfile_dir, filename_slug
             )
-            QgsLayerDefinition.exportLayerDefinition(temporary_toppingfile_path, [node])
+            result, result_message = QgsLayerDefinition.exportLayerDefinition(
+                temporary_toppingfile_path, [node]
+            )
+            if not result:
+                logging.warning(
+                    "Could not export definitionfile of {} to {}: {}".format(
+                        node.name(), temporary_toppingfile_path, result_message
+                    )
+                )
             return temporary_toppingfile_path
 
         def _temporary_qmlstylefile(
@@ -274,7 +288,18 @@ class ProjectTopping(QObject):
             )
             if style_name:
                 layer.styleManager().setCurrentStyle(style_name)
-            layer.saveNamedStyle(temporary_toppingfile_path, categories)
+            result_message, result = layer.saveNamedStyle(
+                temporary_toppingfile_path, categories
+            )
+            if not result:
+                logging.warning(
+                    "Could not export qmlstylefile of {} ({}) to {}: {}".format(
+                        layer.name(),
+                        style_name,
+                        temporary_toppingfile_path,
+                        result_message,
+                    )
+                )
             return temporary_toppingfile_path
 
         def item_dict(self, target: Target):
@@ -404,8 +429,10 @@ class ProjectTopping(QObject):
         Such a dict item contains only one key at the moment: "templatefile"
         """
 
-        def __init__(self):
-            self.temporary_toppingfile_dir = os.path.expanduser("~/.temp_topping_files")
+        def __init__(self, temporary_toppingfile_dir=None):
+            self.temporary_toppingfile_dir = temporary_toppingfile_dir
+            if not self.temporary_toppingfile_dir:
+                self.temporary_toppingfile_dir = tempfile.mkdtemp()
 
         def make_items(
             self,
@@ -424,10 +451,23 @@ class ProjectTopping(QObject):
                     temporary_toppingfile_path = os.path.join(
                         self.temporary_toppingfile_dir, filename_slug
                     )
-                    # clarify what needs to be set in the QgsReadWriteContext()
-                    layout.saveAsTemplate(
-                        temporary_toppingfile_path, QgsReadWriteContext()
-                    )
+                    context = QgsReadWriteContext()
+                    result = layout.saveAsTemplate(temporary_toppingfile_path, context)
+                    if not result:
+                        result_message = ", ".join(
+                            [
+                                message.message()
+                                for message in context.takeMessages()
+                                if message.level == Qgis.MessageLevel.Warning
+                            ]
+                        )
+                        logging.warning(
+                            "Could not export layout template of {} to {}: {}".format(
+                                layout.name(),
+                                temporary_toppingfile_path,
+                                result_message,
+                            )
+                        )
                     self[layout.name()]["templatefile"] = temporary_toppingfile_path
 
         def item_dict(self, target: Target):
@@ -443,11 +483,15 @@ class ProjectTopping(QObject):
 
     def __init__(self):
         QObject.__init__(self)
-        self.layertree = self.LayerTreeItem()
+        temporary_toppingfile_dir = tempfile.mkdtemp(
+            prefix="toppingmaker_temporary_files_"
+        )
+
+        self.layertree = self.LayerTreeItem(temporary_toppingfile_dir)
         self.mapthemes = self.MapThemes()
         self.layerorder = []
         self.variables = self.Variables()
-        self.layouts = self.Layouts()
+        self.layouts = self.Layouts(temporary_toppingfile_dir)
 
     def parse_project(
         self, project: QgsProject, export_settings: ExportSettings = ExportSettings()

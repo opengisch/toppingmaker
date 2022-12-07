@@ -467,7 +467,7 @@ class ToppingMakerTest(unittest.TestCase):
         assert len(target.toppingfileinfo_list) == 21
 
         for toppingfileinfo in target.toppingfileinfo_list:
-            print(toppingfileinfo["path"])
+            self.print_info(toppingfileinfo["path"])
             assert "path" in toppingfileinfo
             assert "type" in toppingfileinfo
 
@@ -775,12 +775,16 @@ class ToppingMakerTest(unittest.TestCase):
         # define the layouts to export
         export_settings.layouts = ["Layout One", "Layout Three"]
 
-        print(f" Layer to style export: {export_settings.qmlstyle_setting_nodes}")
-        print(
+        self.print_info(
+            f" Layer to style export: {export_settings.qmlstyle_setting_nodes}"
+        )
+        self.print_info(
             f" Layer to definition export: {export_settings.definition_setting_nodes}"
         )
-        print(f" Layer to source export: {export_settings.source_setting_nodes}")
-        print(f" Map Themes to export: {export_settings.mapthemes}")
+        self.print_info(
+            f" Layer to source export: {export_settings.source_setting_nodes}"
+        )
+        self.print_info(f" Map Themes to export: {export_settings.mapthemes}")
         return project, export_settings
 
     def print_info(self, text):

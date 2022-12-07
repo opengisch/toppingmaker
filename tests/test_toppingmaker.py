@@ -24,10 +24,18 @@ import os
 import tempfile
 
 import yaml
-from qgis.core import QgsProject, QgsVectorLayer
-from qgis.testing import unittest
+from qgis.core import (
+    QgsExpressionContextUtils,
+    QgsMapThemeCollection,
+    QgsPrintLayout,
+    QgsProject,
+    QgsVectorLayer,
+)
+from qgis.testing import start_app, unittest
 
 from toppingmaker import ExportSettings, ProjectTopping, Target
+
+start_app()
 
 
 class ToppingMakerTest(unittest.TestCase):
@@ -52,6 +60,8 @@ class ToppingMakerTest(unittest.TestCase):
 
     def test_parse_project(self):
         """
+        Parse it without export settings...
+
         "Big Group":
             group: True
             child-nodes:
@@ -83,6 +93,7 @@ class ToppingMakerTest(unittest.TestCase):
         project_topping = ProjectTopping()
         project_topping.parse_project(project)
 
+        # check layertree
         checked_groups = []
         for item in project_topping.layertree.items:
             if item.name == "Big Group":
@@ -98,7 +109,64 @@ class ToppingMakerTest(unittest.TestCase):
                                 checked_groups.append("Small Group")
         assert checked_groups == ["Big Group", "Medium Group", "Small Group"]
 
+    def test_parse_project_with_mapthemes(self):
+        """
+        Parse it with export settings defining map themes, variables and layouts
+        """
+        project, export_settings = self._make_project_and_export_settings()
+
+        project_topping = ProjectTopping()
+        project_topping.parse_project(project, export_settings)
+
+        # check mapthemes
+        mapthemes = project_topping.mapthemes
+        assert mapthemes["Robot Theme"]["Layer One"]
+        assert mapthemes["Robot Theme"]["Layer One"]["style"] == "robot 1"
+        assert mapthemes["Robot Theme"]["Layer Three"]
+        assert mapthemes["Robot Theme"]["Layer Three"]["style"] == "robot 3"
+        assert mapthemes["Robot Theme"]["Small Group"]
+        assert mapthemes["Robot Theme"]["Small Group"]["expanded"]
+        assert mapthemes["Robot Theme"]["Big Group"]
+        assert mapthemes["Robot Theme"]["Big Group"]["expanded"]
+        assert "Medium Group" not in mapthemes["Robot Theme"]
+
+        assert set(mapthemes.keys()) == {"French Theme", "Robot Theme"}
+        assert mapthemes["French Theme"]["Layer One"]
+        assert mapthemes["French Theme"]["Layer One"]["style"] == "french 1"
+        assert mapthemes["French Theme"]["Layer Three"]
+        assert mapthemes["French Theme"]["Layer Three"]["style"] == "french 3"
+        assert mapthemes["French Theme"]["Medium Group"]
+        assert mapthemes["French Theme"]["Medium Group"]["expanded"]
+        assert "Small Group" not in mapthemes["French Theme"]
+        assert "Big Group" not in mapthemes["French Theme"]
+
+        # check variables
+        variables = project_topping.variables
+        # Anyway in practice no spaces should be used to be able to access them in the expressions like @first_variable
+        assert variables.get("First Variable") == "This is a test value."
+        # QGIS is currently (3.29) not able to store structures in the project file. Still...
+        assert variables.get("Variable with Structure") == [
+            "Not",
+            "The",
+            "Normal",
+            815,
+            "Case",
+        ]
+        # "Another Variable" is in the project but not in the export_settings
+        assert "Another Variable" not in variables
+
+        # check layouts
+        layouts = project_topping.layouts
+        assert layouts.get("Layout One")
+        assert layouts.get("Layout Three")
+        # "Layout Two" is in the project but not in the export_settings
+        assert "Layout Two" not in layouts
+
     def test_generate_files(self):
+        """
+        Generate projecttopping file with layertree, map themes, variables and layouts.
+        And all the toppingfiles for styles, definition and layouttemplates.
+        """
         project, export_settings = self._make_project_and_export_settings()
         layers = project.layerTreeRoot().findLayers()
         self.assertEqual(len(layers), 10)
@@ -130,7 +198,8 @@ class ToppingMakerTest(unittest.TestCase):
             target.main_dir, project_topping.generate_files(target)
         )
 
-        # check projecttopping_file
+        # check layertree projecttopping_file
+
         foundAllofEm = False
         foundLayerOne = False
         foundLayerTwo = False
@@ -156,6 +225,225 @@ class ToppingMakerTest(unittest.TestCase):
         assert foundLayerOne
         assert foundLayerTwo
 
+        # check mapthemes in projecttopping_file
+
+        foundFrenchTheme = False
+        foundRobotTheme = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "mapthemes" in projecttopping_data
+            assert projecttopping_data["mapthemes"]
+            for theme_name in projecttopping_data["mapthemes"].keys():
+                if theme_name == "Robot Theme":
+                    foundRobotTheme = True
+                    expected_records = {
+                        "Layer One",
+                        "Layer Three",
+                        "Small Group",
+                        "Big Group",
+                    }
+                    assert expected_records == set(
+                        projecttopping_data["mapthemes"]["Robot Theme"].keys()
+                    )
+                    checked_record_count = 0
+                    for record_name in projecttopping_data["mapthemes"][
+                        "Robot Theme"
+                    ].keys():
+                        if record_name == "Layer One":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]["style"]
+                                == "robot 1"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert not projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Layer One"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Layer Three":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]["style"]
+                                == "robot 3"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Layer Three"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Small Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Small Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Small Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                        if record_name == "Big Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["Robot Theme"][
+                                    "Big Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["Robot Theme"][
+                                "Big Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                    assert checked_record_count == 4
+                if theme_name == "French Theme":
+                    foundFrenchTheme = True
+                    expected_records = {"Layer One", "Layer Three", "Medium Group"}
+                    assert expected_records == set(
+                        projecttopping_data["mapthemes"]["French Theme"].keys()
+                    )
+                    checked_record_count = 0
+                    for record_name in projecttopping_data["mapthemes"][
+                        "French Theme"
+                    ].keys():
+                        if record_name == "Layer One":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]["style"]
+                                == "french 1"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer One"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["French Theme"][
+                                "Layer One"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Layer Three":
+                            assert (
+                                "style"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert (
+                                projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]["style"]
+                                == "french 3"
+                            )
+                            assert (
+                                "visible"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Layer Three"
+                                ]
+                            )
+                            assert not projecttopping_data["mapthemes"]["French Theme"][
+                                "Layer Three"
+                            ]["visible"]
+                            checked_record_count += 1
+                        if record_name == "Medium Group":
+                            assert (
+                                "expanded"
+                                in projecttopping_data["mapthemes"]["French Theme"][
+                                    "Medium Group"
+                                ]
+                            )
+                            assert projecttopping_data["mapthemes"]["French Theme"][
+                                "Medium Group"
+                            ]["expanded"]
+                            checked_record_count += 1
+                    assert checked_record_count == 3
+
+        assert foundFrenchTheme
+        assert foundRobotTheme
+
+        # check variables
+        variable_count = 0
+        foundFirstVariable = False
+        foundVariableWithStructure = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "variables" in projecttopping_data
+            assert projecttopping_data["variables"]
+            for variable_key in projecttopping_data["variables"].keys():
+                if variable_key == "First Variable":
+                    assert (
+                        projecttopping_data["variables"][variable_key]
+                        == "This is a test value."
+                    )
+                    foundFirstVariable = True
+                if variable_key == "Variable with Structure":
+                    assert projecttopping_data["variables"][variable_key] == [
+                        "Not",
+                        "The",
+                        "Normal",
+                        815,
+                        "Case",
+                    ]
+                    foundVariableWithStructure = True
+                variable_count += 1
+
+        assert variable_count == 2
+        assert foundFirstVariable
+        assert foundVariableWithStructure
+
+        # check layouts
+        layout_count = 0
+        foundLayoutOne = False
+        foundLayoutThree = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "layouts" in projecttopping_data
+            assert projecttopping_data["layouts"]
+            for layout_name in projecttopping_data["layouts"].keys():
+                if layout_name == "Layout One":
+                    assert "templatefile" in projecttopping_data["layouts"][layout_name]
+                    foundLayoutOne = True
+                if layout_name == "Layout Three":
+                    assert "templatefile" in projecttopping_data["layouts"][layout_name]
+                    foundLayoutThree = True
+                layout_count += 1
+
+        assert layout_count == 2
+        assert foundLayoutOne
+        assert foundLayoutThree
+
         # check toppingfiles
 
         # there should be exported 6 files (see _make_project_and_export_settings)
@@ -171,10 +459,15 @@ class ToppingMakerTest(unittest.TestCase):
 
         countchecked = 0
 
-        # there should be 13 toppingfiles: one project topping, and 2 x 6 toppingfiles of the layers (since the layers are multiple times in the tree)
-        assert len(target.toppingfileinfo_list) == 13
+        # there should be 21 toppingfiles:
+        # - one project topping
+        # - 2 x 3 qlr files (two times since the layers are multiple times in the tree)
+        # - 2 x 6 qml files (one layers with 3 styles, one layer with 2 styles and one layer with one style - and two times since the layers are multiple times in the tree)
+        # - 2 qpt template files
+        assert len(target.toppingfileinfo_list) == 21
 
         for toppingfileinfo in target.toppingfileinfo_list:
+            self.print_info(toppingfileinfo["path"])
             assert "path" in toppingfileinfo
             assert "type" in toppingfileinfo
 
@@ -185,7 +478,22 @@ class ToppingMakerTest(unittest.TestCase):
                 countchecked += 1
             if (
                 toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_one_french_1.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_one_robot_1.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
                 == "freddys_projects/this_specific_project/layerstyle/freddys_layer_three.qml"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layerstyle/freddys_layer_three_french_3.qml"
             ):
                 countchecked += 1
             if (
@@ -208,8 +516,19 @@ class ToppingMakerTest(unittest.TestCase):
                 == "freddys_projects/this_specific_project/layerdefinition/freddys_layer_five.qlr"
             ):
                 countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layouttemplate/freddys_layout_one.qpt"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layouttemplate/freddys_layout_three.qpt"
+            ):
+                countchecked += 1
 
-        assert countchecked == 12
+        # without the projecttopping file they are 20
+        assert countchecked == 20
 
     def test_custom_path_resolver(self):
         # load QGIS project into structure
@@ -259,6 +578,9 @@ class ToppingMakerTest(unittest.TestCase):
         assert countchecked == 6
 
     def _make_project_and_export_settings(self):
+        # ---
+        # make the project
+        # ---
         project = QgsProject()
         project.removeAllMapLayers()
 
@@ -283,6 +605,21 @@ class ToppingMakerTest(unittest.TestCase):
         )
         assert l5.isValid()
 
+        # append style to layer one and three
+        style_manager = l1.styleManager()
+        l1.setDisplayExpression("'French:'||'un'")
+        style_manager.addStyleFromLayer("french 1")
+        l1.setDisplayExpression("'Robot:'||'0001'")
+        style_manager.addStyleFromLayer("robot 1")
+        style_manager.setCurrentStyle("default")
+
+        style_manager = l3.styleManager()
+        l3.setDisplayExpression("'French:'||'trois'")
+        style_manager.addStyleFromLayer("french 3")
+        l3.setDisplayExpression("'Robot:'||'0011'")
+        style_manager.addStyleFromLayer("robot 3")
+        style_manager.setCurrentStyle("default")
+
         project.addMapLayer(l1, False)
         project.addMapLayer(l2, False)
         project.addMapLayer(l3, False)
@@ -306,12 +643,104 @@ class ToppingMakerTest(unittest.TestCase):
         allofemgroup.addLayer(l4)
         allofemgroup.addLayer(l5)
 
+        # create robot map theme
+        # with styles and layer one unchecked
+        map_theme_record = QgsMapThemeCollection.MapThemeRecord()
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l1)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "robot 1"
+        map_theme_layer_record.isVisible = False
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l3)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "robot 3"
+        map_theme_layer_record.isVisible = True
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        # group Big and Small expanded, Medium not expanded
+        map_theme_record.setHasExpandedStateInfo(True)
+        map_theme_record.setExpandedGroupNodes(["Small Group", "Big Group"])
+        project.mapThemeCollection().insert("Robot Theme", map_theme_record)
+
+        # create french map theme
+        # with styles and layer three unchecked
+        map_theme_record = QgsMapThemeCollection.MapThemeRecord()
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l1)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "french 1"
+        map_theme_layer_record.isVisible = True
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        map_theme_layer_record = QgsMapThemeCollection.MapThemeLayerRecord()
+        map_theme_layer_record.setLayer(l3)
+        map_theme_layer_record.usingCurrentStyle = True
+        map_theme_layer_record.currentStyle = "french 3"
+        map_theme_layer_record.isVisible = False
+        map_theme_record.addLayerRecord(map_theme_layer_record)
+        # group Medium expanded, Big and Small not expanded
+        map_theme_record.setHasExpandedStateInfo(True)
+        map_theme_record.setExpandedGroupNodes(["Medium Group"])
+        project.mapThemeCollection().insert("French Theme", map_theme_record)
+
+        # set the custom project variables
+        QgsExpressionContextUtils.setProjectVariable(
+            project, "First Variable", "This is a test value."
+        )
+        QgsExpressionContextUtils.setProjectVariable(project, "Another Variable", "2")
+        QgsExpressionContextUtils.setProjectVariable(
+            project, "Variable with Structure", ["Not", "The", "Normal", 815, "Case"]
+        )
+
+        # create layouts
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout One")
+        project.layoutManager().addLayout(layout)
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout Two")
+        project.layoutManager().addLayout(layout)
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout Three")
+        project.layoutManager().addLayout(layout)
+
+        # ---
+        # and make the export settings
+        # ---
         export_settings = ExportSettings()
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer One", True
         )
+        # exporting "french" and "robot" style to layer one
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer One",
+            True,
+            None,
+            "french 1",
+        )
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer One",
+            True,
+            None,
+            "robot 1",
+        )
+        # only exporting "french" style to layer three
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer Three", True
+        )
+        export_settings.set_setting_values(
+            ExportSettings.ToppingType.QMLSTYLE,
+            None,
+            "Layer Three",
+            True,
+            None,
+            "french 3",
         )
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer Five", True
@@ -337,9 +766,25 @@ class ToppingMakerTest(unittest.TestCase):
             ExportSettings.ToppingType.SOURCE, None, "Layer Three", True
         )
 
-        print(export_settings.qmlstyle_setting_nodes)
-        print(export_settings.definition_setting_nodes)
-        print(export_settings.source_setting_nodes)
+        # define the map themes to export
+        export_settings.mapthemes = ["French Theme", "Robot Theme"]
+
+        # define the custom variables to export
+        export_settings.variables = ["First Variable", "Variable with Structure"]
+
+        # define the layouts to export
+        export_settings.layouts = ["Layout One", "Layout Three"]
+
+        self.print_info(
+            f" Layer to style export: {export_settings.qmlstyle_setting_nodes}"
+        )
+        self.print_info(
+            f" Layer to definition export: {export_settings.definition_setting_nodes}"
+        )
+        self.print_info(
+            f" Layer to source export: {export_settings.source_setting_nodes}"
+        )
+        self.print_info(f" Map Themes to export: {export_settings.mapthemes}")
         return project, export_settings
 
     def print_info(self, text):

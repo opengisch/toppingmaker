@@ -48,9 +48,9 @@ class ProjectTopping(QObject):
     A project configuration resulting in a YAML file that contains:
     - layertree
     - layerorder
-    - project variables (future)
-    - print layout (future)
-    - map themes (future)
+    - map themes
+    - project variables
+    - print layouts
 
     QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
     """

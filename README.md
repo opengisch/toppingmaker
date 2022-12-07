@@ -163,14 +163,14 @@ export_settings.mapthemes = ["Robot Theme", "French Theme"]
 
 Set the keys of custom variables that should be considered as a list:
 ```py
-export_settings.variables = ["First Variable", "Another Variable", "Variable with Structure"]
+export_settings.variables = ["First Variable", "Variable with Structure"]
 ```
 
 #### Print Layout Settings
 
 Set the names of layouts that should be considered (exported as template files) as a list:
 ```py
-export_settings.variables = ["Layout One", "Layout Two"]
+export_settings.variables = ["Layout One", "Layout Three"]
 ```
 
 ### Generate the Files for a `ProjectTopping` containing `ExportSetting`
@@ -275,6 +275,17 @@ mapthemes:
       expanded: false
 
 layerorder: []
+
+variables:
+  "First Variable": "This is a test value."
+  "Variable with Structure": ["Not", "The", "Normal", 815, "Case"]
+
+layouts:
+  "Layout One":
+    templatefile: "../layouttemplate/layout_one.qpt"
+  "Layout Three":
+    templatefile: "../layouttemplate/layout_three.qpt"
+
 ```
 
 ## Most important functions

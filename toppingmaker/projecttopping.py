@@ -419,9 +419,11 @@ class ProjectTopping(QObject):
         ):
             self.clear()
             for variable_key in export_settings.variables:
-                self[variable_key] = QgsExpressionContextUtils.projectScope(
+                variable_value = QgsExpressionContextUtils.projectScope(
                     project
                 ).variable(variable_key)
+                if variable_value:
+                    self[variable_key] = variable_value
 
     class Layouts(dict):
         """

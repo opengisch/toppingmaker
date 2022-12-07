@@ -170,7 +170,7 @@ export_settings.variables = ["first_variable", "Another_Variable"]
 
 Set the names of layouts that should be considered (exported as template files) as a list:
 ```py
-export_settings.variables = ["Layout One", "Layout Three"]
+export_settings.layouts = ["Layout One", "Layout Three"]
 ```
 
 ### Generate the Files for a `ProjectTopping` containing `ExportSetting`

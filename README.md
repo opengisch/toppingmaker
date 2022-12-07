@@ -159,6 +159,20 @@ Set the names of the map themes that should be considered as a list:
 export_settings.mapthemes = ["Robot Theme", "French Theme"]
 ```
 
+#### Custom Project Variables Settings
+
+Set the keys of custom variables that should be considered as a list:
+```py
+export_settings.variables = ["first_variable", "Another_Variable"]
+```
+
+#### Print Layout Settings
+
+Set the names of layouts that should be considered (exported as template files) as a list:
+```py
+export_settings.variables = ["Layout One", "Layout Three"]
+```
+
 ### Generate the Files for a `ProjectTopping` containing `ExportSetting`
 When parsing the QgsProject we need to pass the `ExportSettings`:
 ```py
@@ -261,6 +275,17 @@ mapthemes:
       expanded: false
 
 layerorder: []
+
+variables:
+  "first_variable": "This is a test value."
+  "Another_Variable": "2"
+
+layouts:
+  "Layout One":
+    templatefile: "../layouttemplate/layout_one.qpt"
+  "Layout Three":
+    templatefile: "../layouttemplate/layout_three.qpt"
+
 ```
 
 ## Most important functions
@@ -382,6 +407,14 @@ class ToppingType(Enum):
 #### Map Themes Settings
 
 The export setting of the map themes is a simple list of maptheme names: `mapthemes = []`
+
+#### Custom Project Variables:
+
+The export setting of the custom variables is simple list of the keys stored in `variables = []`.
+
+#### Layouts:
+
+The export setting of the print layouts is simple list of the layout names stored in `layouts = []`.
 
 ## Infos for Devs
 

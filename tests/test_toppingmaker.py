@@ -24,10 +24,18 @@ import os
 import tempfile
 
 import yaml
-from qgis.core import QgsMapThemeCollection, QgsProject, QgsVectorLayer
-from qgis.testing import unittest
+from qgis.core import (
+    QgsExpressionContextUtils,
+    QgsMapThemeCollection,
+    QgsPrintLayout,
+    QgsProject,
+    QgsVectorLayer,
+)
+from qgis.testing import start_app, unittest
 
 from toppingmaker import ExportSettings, ProjectTopping, Target
+
+start_app()
 
 
 class ToppingMakerTest(unittest.TestCase):
@@ -103,7 +111,7 @@ class ToppingMakerTest(unittest.TestCase):
 
     def test_parse_project_with_mapthemes(self):
         """
-        Parse it without export settings defining map themes.
+        Parse it with export settings defining map themes, variables and layouts
         """
         project, export_settings = self._make_project_and_export_settings()
 
@@ -132,7 +140,33 @@ class ToppingMakerTest(unittest.TestCase):
         assert "Small Group" not in mapthemes["French Theme"]
         assert "Big Group" not in mapthemes["French Theme"]
 
+        # check variables
+        variables = project_topping.variables
+        # Anyway in practice no spaces should be used to be able to access them in the expressions like @first_variable
+        assert variables.get("First Variable") == "This is a test value."
+        # QGIS is currently (3.29) not able to store structures in the project file. Still...
+        assert variables.get("Variable with Structure") == [
+            "Not",
+            "The",
+            "Normal",
+            815,
+            "Case",
+        ]
+        # "Another Variable" is in the project but not in the export_settings
+        assert "Another Variable" not in variables
+
+        # check layouts
+        layouts = project_topping.layouts
+        assert layouts.get("Layout One")
+        assert layouts.get("Layout Three")
+        # "Layout Two" is in the project but not in the export_settings
+        assert "Layout Two" not in layouts
+
     def test_generate_files(self):
+        """
+        Generate projecttopping file with layertree, map themes, variables and layouts.
+        And all the toppingfiles for styles, definition and layouttemplates.
+        """
         project, export_settings = self._make_project_and_export_settings()
         layers = project.layerTreeRoot().findLayers()
         self.assertEqual(len(layers), 10)
@@ -357,6 +391,59 @@ class ToppingMakerTest(unittest.TestCase):
         assert foundFrenchTheme
         assert foundRobotTheme
 
+        # check variables
+        variable_count = 0
+        foundFirstVariable = False
+        foundVariableWithStructure = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "variables" in projecttopping_data
+            assert projecttopping_data["variables"]
+            for variable_key in projecttopping_data["variables"].keys():
+                if variable_key == "First Variable":
+                    assert (
+                        projecttopping_data["variables"][variable_key]
+                        == "This is a test value."
+                    )
+                    foundFirstVariable = True
+                if variable_key == "Variable with Structure":
+                    assert projecttopping_data["variables"][variable_key] == [
+                        "Not",
+                        "The",
+                        "Normal",
+                        815,
+                        "Case",
+                    ]
+                    foundVariableWithStructure = True
+                variable_count += 1
+
+        assert variable_count == 2
+        assert foundFirstVariable
+        assert foundVariableWithStructure
+
+        # check layouts
+        layout_count = 0
+        foundLayoutOne = False
+        foundLayoutThree = False
+
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "layouts" in projecttopping_data
+            assert projecttopping_data["layouts"]
+            for layout_name in projecttopping_data["layouts"].keys():
+                if layout_name == "Layout One":
+                    assert "templatefile" in projecttopping_data["layouts"][layout_name]
+                    foundLayoutOne = True
+                if layout_name == "Layout Three":
+                    assert "templatefile" in projecttopping_data["layouts"][layout_name]
+                    foundLayoutThree = True
+                layout_count += 1
+
+        assert layout_count == 2
+        assert foundLayoutOne
+        assert foundLayoutThree
+
         # check toppingfiles
 
         # there should be exported 6 files (see _make_project_and_export_settings)
@@ -372,14 +459,15 @@ class ToppingMakerTest(unittest.TestCase):
 
         countchecked = 0
 
-        # there should be 13 toppingfiles:
+        # there should be 21 toppingfiles:
         # - one project topping
         # - 2 x 3 qlr files (two times since the layers are multiple times in the tree)
         # - 2 x 6 qml files (one layers with 3 styles, one layer with 2 styles and one layer with one style - and two times since the layers are multiple times in the tree)
-        assert len(target.toppingfileinfo_list) == 19
+        # - 2 qpt template files
+        assert len(target.toppingfileinfo_list) == 21
 
         for toppingfileinfo in target.toppingfileinfo_list:
-            print(toppingfileinfo["path"])
+            self.print_info(toppingfileinfo["path"])
             assert "path" in toppingfileinfo
             assert "type" in toppingfileinfo
 
@@ -428,8 +516,19 @@ class ToppingMakerTest(unittest.TestCase):
                 == "freddys_projects/this_specific_project/layerdefinition/freddys_layer_five.qlr"
             ):
                 countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layouttemplate/freddys_layout_one.qpt"
+            ):
+                countchecked += 1
+            if (
+                toppingfileinfo["path"]
+                == "freddys_projects/this_specific_project/layouttemplate/freddys_layout_three.qpt"
+            ):
+                countchecked += 1
 
-        assert countchecked == 18
+        # without the projecttopping file they are 20
+        assert countchecked == 20
 
     def test_custom_path_resolver(self):
         # load QGIS project into structure
@@ -479,6 +578,9 @@ class ToppingMakerTest(unittest.TestCase):
         assert countchecked == 6
 
     def _make_project_and_export_settings(self):
+        # ---
+        # make the project
+        # ---
         project = QgsProject()
         project.removeAllMapLayers()
 
@@ -541,13 +643,6 @@ class ToppingMakerTest(unittest.TestCase):
         allofemgroup.addLayer(l4)
         allofemgroup.addLayer(l5)
 
-        # create a map theme from the current state
-        # crashes on getting the model - check it out later dave
-        # layertree_root = project.layerTreeRoot()
-        # layertree_model = QgsLayerTreeModel(layertree_root)
-        # map_theme_record = QgsMapThemeCollection.createThemeFromCurrentState(layertree_root,layertree_model)
-        # project.mapThemeCollection().insert("General Theme", map_theme_record)
-
         # create robot map theme
         # with styles and layer one unchecked
         map_theme_record = QgsMapThemeCollection.MapThemeRecord()
@@ -588,6 +683,32 @@ class ToppingMakerTest(unittest.TestCase):
         map_theme_record.setExpandedGroupNodes(["Medium Group"])
         project.mapThemeCollection().insert("French Theme", map_theme_record)
 
+        # set the custom project variables
+        QgsExpressionContextUtils.setProjectVariable(
+            project, "First Variable", "This is a test value."
+        )
+        QgsExpressionContextUtils.setProjectVariable(project, "Another Variable", "2")
+        QgsExpressionContextUtils.setProjectVariable(
+            project, "Variable with Structure", ["Not", "The", "Normal", 815, "Case"]
+        )
+
+        # create layouts
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout One")
+        project.layoutManager().addLayout(layout)
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout Two")
+        project.layoutManager().addLayout(layout)
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        layout.setName("Layout Three")
+        project.layoutManager().addLayout(layout)
+
+        # ---
+        # and make the export settings
+        # ---
         export_settings = ExportSettings()
         export_settings.set_setting_values(
             ExportSettings.ToppingType.QMLSTYLE, None, "Layer One", True
@@ -644,15 +765,26 @@ class ToppingMakerTest(unittest.TestCase):
         export_settings.set_setting_values(
             ExportSettings.ToppingType.SOURCE, None, "Layer Three", True
         )
+
         # define the map themes to export
         export_settings.mapthemes = ["French Theme", "Robot Theme"]
 
-        print(f" Layer to style export: {export_settings.qmlstyle_setting_nodes}")
-        print(
+        # define the custom variables to export
+        export_settings.variables = ["First Variable", "Variable with Structure"]
+
+        # define the layouts to export
+        export_settings.layouts = ["Layout One", "Layout Three"]
+
+        self.print_info(
+            f" Layer to style export: {export_settings.qmlstyle_setting_nodes}"
+        )
+        self.print_info(
             f" Layer to definition export: {export_settings.definition_setting_nodes}"
         )
-        print(f" Layer to source export: {export_settings.source_setting_nodes}")
-        print(f" Map Themes to export: {export_settings.mapthemes}")
+        self.print_info(
+            f" Layer to source export: {export_settings.source_setting_nodes}"
+        )
+        self.print_info(f" Map Themes to export: {export_settings.mapthemes}")
         return project, export_settings
 
     def print_info(self, text):

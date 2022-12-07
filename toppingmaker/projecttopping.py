@@ -187,7 +187,7 @@ class ProjectTopping(QObject):
                             self.properties.tablename = QgsDataSourceUri(
                                 provider.dataSourceUri()
                             ).table()
-                            self.properties.geometry = QgsDataSourceUri(
+                            self.properties.geometrycolumn = QgsDataSourceUri(
                                 provider.dataSourceUri()
                             ).geometryColumn()
                         elif (

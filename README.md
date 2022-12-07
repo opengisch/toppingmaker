@@ -193,6 +193,9 @@ repo
         ├── freddys_qgis_project_street.qml
         ├── freddys_qgis_project_street_french.qml
         └── freddys_qgis_project_street_robot.qml
+    └── layouttemplate
+        ├── freddys_qgis_project_layout_one.qpt
+        └── freddys_qgis_project_layout_three.qpt
 ```
 
 And the YAML looks like this:
@@ -282,9 +285,9 @@ variables:
 
 layouts:
   "Layout One":
-    templatefile: "../layouttemplate/layout_one.qpt"
+    templatefile: "../layouttemplate/freddys_qgis_project_layout_one.qpt"
   "Layout Three":
-    templatefile: "../layouttemplate/layout_three.qpt"
+    templatefile: "../layouttemplate/freddys_qgis_project_layout_three.qpt"
 
 ```
 
@@ -295,8 +298,8 @@ A project configuration resulting in a YAML file that contains:
 - layerorder
 - layer styles
 - map themes
-- project variables (future)
-- print layout (future)
+- project variables
+- print layouts
 
 QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
 

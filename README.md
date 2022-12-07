@@ -163,7 +163,7 @@ export_settings.mapthemes = ["Robot Theme", "French Theme"]
 
 Set the keys of custom variables that should be considered as a list:
 ```py
-export_settings.variables = ["First Variable", "Variable with Structure"]
+export_settings.variables = ["first_variable", "Another_Variable"]
 ```
 
 #### Print Layout Settings
@@ -277,8 +277,8 @@ mapthemes:
 layerorder: []
 
 variables:
-  "First Variable": "This is a test value."
-  "Variable with Structure": ["Not", "The", "Normal", 815, "Case"]
+  "first_variable": "This is a test value."
+  "Another_Variable": "2"
 
 layouts:
   "Layout One":

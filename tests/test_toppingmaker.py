@@ -142,7 +142,9 @@ class ToppingMakerTest(unittest.TestCase):
 
         # check variables
         variables = project_topping.variables
+        # Anyway in practice no spaces should be used to be able to access them in the expressions like @first_variable
         assert variables.get("First Variable") == "This is a test value."
+        # QGIS is currently (3.29) not able to store structures in the project file. Still...
         assert variables.get("Variable with Structure") == [
             "Not",
             "The",

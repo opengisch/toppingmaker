@@ -587,9 +587,18 @@ class ProjectTopping(QObject):
         And it generates and stores the toppingfiles according th the Target.
         """
         projecttopping_dict = {}
-        projecttopping_dict["layertree"] = self.layertree.items_list(target)
-        projecttopping_dict["mapthemes"] = dict(self.mapthemes)
-        projecttopping_dict["variables"] = dict(self.variables)
-        projecttopping_dict["layouts"] = self.layouts.item_dict(target)
-        projecttopping_dict["layerorder"] = self.layerorder
+        layertree_items_list = self.layertree.items_list(target)
+        if layertree_items_list:
+            projecttopping_dict["layertree"] = layertree_items_list
+        mapthemes_dict = dict(self.mapthemes)
+        if mapthemes_dict:
+            projecttopping_dict["mapthemes"] = mapthemes_dict
+        variables_dict = dict(self.variables)
+        if variables_dict:
+            projecttopping_dict["variables"] = variables_dict
+        layouts_item_dict = self.layouts.item_dict(target)
+        if layouts_item_dict:
+            projecttopping_dict["layouts"] = layouts_item_dict
+        if self.layerorder:
+            projecttopping_dict["layerorder"] = self.layerorder
         return projecttopping_dict

@@ -154,7 +154,7 @@ class ExportSettings(object):
     def _node_key(self, node=None, style_name=None):
         # creates a key according to the available node.
         if node:
-            if style_name:
+            if style_name and style_name != "default":
                 return (node.name(), style_name)
             else:
                 return node
@@ -163,7 +163,7 @@ class ExportSettings(object):
     def _name_key(self, name=None, style_name=None):
         # creates a key according to the available name.
         if name:
-            if style_name:
+            if style_name and style_name != "default":
                 return (name, style_name)
             else:
                 return name

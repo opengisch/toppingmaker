@@ -422,8 +422,7 @@ class ProjectTopping(QObject):
                 variable_value = QgsExpressionContextUtils.projectScope(
                     project
                 ).variable(variable_key)
-                if variable_value:
-                    self[variable_key] = variable_value
+                self[variable_key] = variable_value or None
 
     class Layouts(dict):
         """

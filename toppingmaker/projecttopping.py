@@ -401,13 +401,13 @@ class ProjectTopping(QObject):
                             maptheme_item[expanded_groupnode] = {}
                             maptheme_item[expanded_groupnode]["group"] = True
                         maptheme_item[expanded_groupnode]["expanded"] = True
-                # setHasCheckedStateInfo(True) is not available in the API, what makes it impossible to control the checked state of a group
-                # see https://github.com/SebastienPeillet/QGIS/commit/736e46daa640b8a9c66107b4f05319d6d2534ac5#discussion_r1037225879
-                for checked_groupnode in maptheme_record.checkedGroupNodes():
-                    if checked_groupnode not in maptheme_item:
-                        maptheme_item[checked_groupnode] = {}
-                        maptheme_item[checked_groupnode]["group"] = True
-                    maptheme_item[checked_groupnode]["checked"] = True
+                if Qgis.QGIS_VERSION_INT >= 33000:
+                    if maptheme_record.hasCheckedStateInfo():
+                        for checked_groupnode in maptheme_record.checkedGroupNodes():
+                            if checked_groupnode not in maptheme_item:
+                                maptheme_item[checked_groupnode] = {}
+                                maptheme_item[checked_groupnode]["group"] = True
+                            maptheme_item[checked_groupnode]["checked"] = True
 
                 self[name] = maptheme_item
 

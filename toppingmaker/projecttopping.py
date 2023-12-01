@@ -548,7 +548,7 @@ class ProjectTopping(QObject):
             # make print layouts
             self.layouts.make_items(project, export_settings)
             # make properties
-            self.properties.make_items(project, export_settings)
+            self.properties.make_items(project)
 
             self.stdout.emit(
                 self.tr("QGIS project map themes parsed with export settings."),

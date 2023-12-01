@@ -25,6 +25,7 @@ import tempfile
 
 import yaml
 from qgis.core import (
+    Qgis,
     QgsExpressionContextUtils,
     QgsMapThemeCollection,
     QgsPrintLayout,

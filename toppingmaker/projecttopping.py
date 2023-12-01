@@ -440,11 +440,10 @@ class ProjectTopping(QObject):
             project: QgsProject
         ):
             self.clear()
-            transaction_mode = None
             if Qgis.QGIS_VERSION_INT < 32600:
-                transaction_mode = project.autoTransaction()
+                self["transaction_mode"] = project.autoTransaction()
             else: 
-                transaction_mode = project.transactionMode()
+                self["transaction_mode"] = project.transactionMode().name
 
     class Layouts(dict):
         """

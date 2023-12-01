@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
                               -------------------
@@ -23,7 +22,7 @@ from typing import Union
 from qgis.core import QgsLayerTreeGroup, QgsLayerTreeLayer
 
 
-class ExportSettings(object):
+class ExportSettings:
     """
     # Layertree:
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
                               -------------------
@@ -63,12 +62,12 @@ class ProjectTopping(QObject):
     LAYERSTYLE_TYPE = "layerstyle"
     LAYOUTTEMPLATE_TYPE = "layouttemplate"
 
-    class TreeItemProperties(object):
+    class TreeItemProperties:
         """
         The properties of a node (tree item)
         """
 
-        class StyleItemProperties(object):
+        class StyleItemProperties:
             """
             The properties of a style item of a node style.
             Currently it's only a qmlstylefile. Maybe in future here a style can be defined.
@@ -106,7 +105,7 @@ class ProjectTopping(QObject):
             # the styles can contain multiple style items with StyleItemProperties
             self.styles = {}
 
-    class LayerTreeItem(object):
+    class LayerTreeItem:
         """
         A tree item of the layer tree. Every item contains the properties of a layer and according the ExportSettings passed on parsing the QGIS project.
         """
@@ -435,14 +434,11 @@ class ProjectTopping(QObject):
         Currently we don't use export settings and export them per default.
         """
 
-        def make_items(
-            self,
-            project: QgsProject
-        ):
+        def make_items(self, project: QgsProject):
             self.clear()
             if Qgis.QGIS_VERSION_INT < 32600:
                 self["transaction_mode"] = project.autoTransaction()
-            else: 
+            else:
                 self["transaction_mode"] = project.transactionMode().name
 
     class Layouts(dict):

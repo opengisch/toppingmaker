@@ -50,6 +50,7 @@ class ProjectTopping(QObject):
     - layerorder
     - map themes
     - project variables
+    - project properties
     - print layouts
 
     QML style files, QLR layer definition files and the source of a layer can be linked in the YAML file and are exported to the specific folders.
@@ -428,6 +429,23 @@ class ProjectTopping(QObject):
                 ).variable(variable_key)
                 self[variable_key] = variable_value or None
 
+    class Properties(dict):
+        """
+        A dict object of dict items describing a selection of projet properties
+        Currently we don't use export settings and export them per default.
+        """
+
+        def make_items(
+            self,
+            project: QgsProject
+        ):
+            self.clear()
+            transaction_mode = None
+            if Qgis.QGIS_VERSION_INT < 32600:
+                transaction_mode = project.autoTransaction()
+            else: 
+                transaction_mode = project.transactionMode()
+
     class Layouts(dict):
         """
         A dict object of dict items describing a layout with templatefile according to the layout names listed in the ExportSettings passed on parsing the QGIS project.
@@ -496,6 +514,7 @@ class ProjectTopping(QObject):
         self.mapthemes = self.MapThemes()
         self.layerorder = []
         self.variables = self.Variables()
+        self.properties = self.Properties()
         self.layouts = self.Layouts(temporary_toppingfile_dir)
 
     def parse_project(
@@ -528,6 +547,8 @@ class ProjectTopping(QObject):
             self.variables.make_items(project, export_settings)
             # make print layouts
             self.layouts.make_items(project, export_settings)
+            # make properties
+            self.properties.make_items(project, export_settings)
 
             self.stdout.emit(
                 self.tr("QGIS project map themes parsed with export settings."),
@@ -586,6 +607,7 @@ class ProjectTopping(QObject):
         Gets the layerorder as a list.
         Gets the mapthemes as a dict.
         Gets the variables as a dict.
+        Gets the properties as a dict.
         Gets the layouts as a dict.
         And it generates and stores the toppingfiles according th the Target.
         """
@@ -599,6 +621,9 @@ class ProjectTopping(QObject):
         variables_dict = dict(self.variables)
         if variables_dict:
             projecttopping_dict["variables"] = variables_dict
+        properties_dict = dict(self.properties)
+        if properties_dict:
+            projecttopping_dict["properties"] = properties_dict
         layouts_item_dict = self.layouts.item_dict(target)
         if layouts_item_dict:
             projecttopping_dict["layouts"] = layouts_item_dict

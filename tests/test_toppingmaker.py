@@ -422,6 +422,15 @@ class ToppingMakerTest(unittest.TestCase):
         assert foundFirstVariable
         assert foundVariableWithStructure
 
+        # check transaction mode 
+        with open(projecttopping_file_path, "r") as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "properties" in projecttopping_data
+            if Qgis.QGIS_VERSION_INT < 32600:
+                assert projecttopping_data["properties"]["transaction_mode"] == True
+            else: 
+                assert projecttopping_data["properties"]["transaction_mode"] == "AutomaticGroups"
+
         # check layouts
         layout_count = 0
         foundLayoutOne = False
@@ -705,6 +714,13 @@ class ToppingMakerTest(unittest.TestCase):
         layout.initializeDefaults()
         layout.setName("Layout Three")
         project.layoutManager().addLayout(layout)
+
+        # set transaction mode 
+        if Qgis.QGIS_VERSION_INT < 32600:
+            project.setAutoTransaction(True)
+        else: 
+            project.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
+
 
         # ---
         # and make the export settings

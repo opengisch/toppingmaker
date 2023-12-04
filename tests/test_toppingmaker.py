@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
                               -------------------
@@ -25,6 +24,7 @@ import tempfile
 
 import yaml
 from qgis.core import (
+    Qgis,
     QgsExpressionContextUtils,
     QgsMapThemeCollection,
     QgsPrintLayout,
@@ -204,7 +204,7 @@ class ToppingMakerTest(unittest.TestCase):
         foundLayerOne = False
         foundLayerTwo = False
 
-        with open(projecttopping_file_path, "r") as yamlfile:
+        with open(projecttopping_file_path) as yamlfile:
             projecttopping_data = yaml.safe_load(yamlfile)
             assert "layertree" in projecttopping_data
             assert projecttopping_data["layertree"]
@@ -230,7 +230,7 @@ class ToppingMakerTest(unittest.TestCase):
         foundFrenchTheme = False
         foundRobotTheme = False
 
-        with open(projecttopping_file_path, "r") as yamlfile:
+        with open(projecttopping_file_path) as yamlfile:
             projecttopping_data = yaml.safe_load(yamlfile)
             assert "mapthemes" in projecttopping_data
             assert projecttopping_data["mapthemes"]
@@ -396,7 +396,7 @@ class ToppingMakerTest(unittest.TestCase):
         foundFirstVariable = False
         foundVariableWithStructure = False
 
-        with open(projecttopping_file_path, "r") as yamlfile:
+        with open(projecttopping_file_path) as yamlfile:
             projecttopping_data = yaml.safe_load(yamlfile)
             assert "variables" in projecttopping_data
             assert projecttopping_data["variables"]
@@ -422,12 +422,24 @@ class ToppingMakerTest(unittest.TestCase):
         assert foundFirstVariable
         assert foundVariableWithStructure
 
+        # check transaction mode
+        with open(projecttopping_file_path) as yamlfile:
+            projecttopping_data = yaml.safe_load(yamlfile)
+            assert "properties" in projecttopping_data
+            if Qgis.QGIS_VERSION_INT < 32600:
+                assert projecttopping_data["properties"]["transaction_mode"] == True
+            else:
+                assert (
+                    projecttopping_data["properties"]["transaction_mode"]
+                    == "AutomaticGroups"
+                )
+
         # check layouts
         layout_count = 0
         foundLayoutOne = False
         foundLayoutThree = False
 
-        with open(projecttopping_file_path, "r") as yamlfile:
+        with open(projecttopping_file_path) as yamlfile:
             projecttopping_data = yaml.safe_load(yamlfile)
             assert "layouts" in projecttopping_data
             assert projecttopping_data["layouts"]
@@ -705,6 +717,12 @@ class ToppingMakerTest(unittest.TestCase):
         layout.initializeDefaults()
         layout.setName("Layout Three")
         project.layoutManager().addLayout(layout)
+
+        # set transaction mode
+        if Qgis.QGIS_VERSION_INT < 32600:
+            project.setAutoTransaction(True)
+        else:
+            project.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
 
         # ---
         # and make the export settings

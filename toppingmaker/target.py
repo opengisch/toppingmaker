@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 /***************************************************************************
                               -------------------
@@ -23,7 +22,7 @@ import shutil
 from .utils import slugify
 
 
-class Target(object):
+class Target:
     """
     The target defines where to store the topping files (YAML, style, definition etc.)
 

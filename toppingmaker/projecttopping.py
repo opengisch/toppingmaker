@@ -84,6 +84,8 @@ class ProjectTopping(QObject):
             self.checked = True
             # if the node is expanded
             self.expanded = True
+            # if the node is private (only for layer nodes)
+            self.private = False
             # if the (layer) node shows feature count
             self.featurecount = False
             # if the (group) node handles mutually-exclusive
@@ -164,6 +166,9 @@ class ProjectTopping(QObject):
                     # must be not recognized as QgsLayerTreeLayer (but QgsLayerTreeNode instead)
                     layer = self._layer_of_node(project, node)
                 self.properties.featurecount = node.customProperty("showFeatureCount")
+
+                self.properties.private = bool(layer.flags() & QgsMapLayer.Private)
+
                 source_setting = export_settings.get_setting(
                     ExportSettings.ToppingType.SOURCE, node, node.name()
                 )
@@ -322,6 +327,8 @@ class ProjectTopping(QObject):
                         ] = self.properties.geometrycolumn
                 if self.properties.featurecount:
                     item_properties_dict["featurecount"] = True
+                if self.properties.private:
+                    item_properties_dict["private"] = True
                 if self.properties.qmlstylefile:
                     item_properties_dict["qmlstylefile"] = target.toppingfile_link(
                         ProjectTopping.LAYERSTYLE_TYPE, self.properties.qmlstylefile

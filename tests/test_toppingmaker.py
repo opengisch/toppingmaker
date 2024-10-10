@@ -167,7 +167,7 @@ class ToppingMakerTest(unittest.TestCase):
     def test_generate_files(self):
         """
         Generate projecttopping file with layertree, map themes, variables and layouts.
-        And all the toppingffor styles, definition and layouttemplatesiles .
+        And all the toppingfiles for styles, definition and layouttemplates.
         """
         project, export_settings = self._make_project_and_export_settings()
         layers = project.layerTreeRoot().findLayers()
@@ -225,8 +225,9 @@ class ToppingMakerTest(unittest.TestCase):
                             assert childnode["Layer Two"]["checked"]
                         if "Layer Four" in childnode:
                             foundLayerFour = True
-                            assert "private" in childnode["Layer Four"]
-                            assert childnode["Layer Four"]["private"]
+                            if Qgis.QGIS_VERSION_INT >= 31800:
+                                assert "private" in childnode["Layer Four"]
+                                assert childnode["Layer Four"]["private"]
         assert foundAllofEm
         assert foundLayerOne
         assert foundLayerTwo
@@ -659,7 +660,8 @@ class ToppingMakerTest(unittest.TestCase):
         allofemgroup.addLayer(l2)
         node3 = allofemgroup.addLayer(l3)
         node3.setItemVisibilityChecked(False)
-        l4.setFlags(l4.flags() | QgsMapLayer.Private)
+        if Qgis.QGIS_VERSION_INT >= 31800:
+            l4.setFlags(l4.flags() | QgsMapLayer.Private)
         allofemgroup.addLayer(l4)
         allofemgroup.addLayer(l5)
 

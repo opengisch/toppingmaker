@@ -167,7 +167,10 @@ class ProjectTopping(QObject):
                     layer = self._layer_of_node(project, node)
                 self.properties.featurecount = node.customProperty("showFeatureCount")
 
-                self.properties.private = bool(layer.flags() & QgsMapLayer.Private)
+                if Qgis.QGIS_VERSION_INT >= 31800:
+                    self.properties.private = bool(layer.flags() & QgsMapLayer.Private)
+                else:
+                    self.properties.private = False
 
                 source_setting = export_settings.get_setting(
                     ExportSettings.ToppingType.SOURCE, node, node.name()

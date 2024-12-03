@@ -421,12 +421,36 @@ class ProjectTopping(QObject):
             project: QgsProject,
             export_settings: ExportSettings,
         ):
+
             self.clear()
             for variable_key in export_settings.variables:
                 variable_value = QgsExpressionContextUtils.projectScope(
                     project
                 ).variable(variable_key)
+
+                # if it's defined as path variable, we have to expose it as toppingfile
+                if variable_key in export_settings.path_variables:
+                    os.makedirs(self.temporary_toppingfile_dir, exist_ok=True)
+                    temporary_toppingfile_path = os.path.join(
+                        self.temporary_toppingfile_dir, os.path.basename(variable_value)
+                    )
+                    variable_value = temporary_toppingfile_path
+
                 self[variable_key] = variable_value or None
+
+        def item_dict(self, target: Target):
+            resolved_items = {}
+            for variable_name in self.keys():
+                # here we need to know if it's a pathvariable or not
+                # this has to be overthought... it's not working like this
+                if path:
+                    resolved_item = {}
+                    resolved_item["templatefile"] = target.toppingfile_link(
+                        ProjectTopping.LAYOUTTEMPLATE_TYPE,
+                        self[layout_name]["templatefile"],
+                    )
+                resolved_items[layout_name] = resolved_item
+            return resolved_items
 
     class Properties(dict):
         """
@@ -613,7 +637,7 @@ class ProjectTopping(QObject):
         mapthemes_dict = dict(self.mapthemes)
         if mapthemes_dict:
             projecttopping_dict["mapthemes"] = mapthemes_dict
-        variables_dict = dict(self.variables)
+        variables_dict = self.variables.item_dict(target)
         if variables_dict:
             projecttopping_dict["variables"] = variables_dict
         properties_dict = dict(self.properties)

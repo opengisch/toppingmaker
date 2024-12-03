@@ -88,6 +88,8 @@ class ExportSettings:
         self.mapthemes = []
         # keys of custom variables to be exported
         self.variables = []
+        # list of variable keys that are defined as paths and should be resolved
+        self.path_variables = []
         # names of layouts
         self.layouts = []
 

@@ -435,11 +435,13 @@ class ProjectTopping(QObject):
 
                 # if it's defined as path variable, we have to expose it as toppingfile
                 if variable_key in export_settings.path_variables:
-                    os.makedirs(self.temporary_toppingfile_dir, exist_ok=True)
-                    temporary_toppingfile_path = os.path.join(
-                        self.temporary_toppingfile_dir, os.path.basename(variable_value)
-                    )
-                    variable_item["value"] = temporary_toppingfile_path
+                    path = variable_value
+                    if project.homePath() and not os.path.isabs(variable_value):
+                        # if it's a saved project and the path is not absolute, make it absolute
+                        path = os.path.join(
+                            variable_value, project.homePath(), variable_value
+                        )
+                    variable_item["value"] = path
                     variable_item["ispath"] = True
                 else:
                     variable_item["value"] = variable_value

@@ -703,6 +703,11 @@ class ToppingMakerTest(unittest.TestCase):
         QgsExpressionContextUtils.setProjectVariable(
             project, "Variable with Structure", ["Not", "The", "Normal", 815, "Case"]
         )
+        QgsExpressionContextUtils.setProjectVariable(
+            project,
+            "Path variable",
+            [os.path.join(self.projecttopping_test_path, "validconfig.ini")],
+        )
 
         # create layouts
         layout = QgsPrintLayout(project)
@@ -788,7 +793,12 @@ class ToppingMakerTest(unittest.TestCase):
         export_settings.mapthemes = ["French Theme", "Robot Theme"]
 
         # define the custom variables to export
-        export_settings.variables = ["First Variable", "Variable with Structure"]
+        export_settings.variables = [
+            "First Variable",
+            "Variable with Structure",
+            "Path variable",
+        ]
+        export_settings.path_variables = ["Path variable"]
 
         # define the layouts to export
         export_settings.layouts = ["Layout One", "Layout Three"]

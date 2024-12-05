@@ -61,6 +61,7 @@ class ProjectTopping(QObject):
     LAYERDEFINITION_TYPE = "layerdefinition"
     LAYERSTYLE_TYPE = "layerstyle"
     LAYOUTTEMPLATE_TYPE = "layouttemplate"
+    GENERIC_TYPE = "generic"
 
     class TreeItemProperties:
         """
@@ -414,6 +415,8 @@ class ProjectTopping(QObject):
     class Variables(dict):
         """
         A dict object of dict items describing a variable according to the variable keys listed in the ExportSettings passed on parsing the QGIS project.
+        The items have the keys 'name' and (optional) 'ispath' for the case that it's a path that needs to be resolved for the topping.
+        To define what variables are paths this needs to be set in the ExportSettings path_variables.
         """
 
         def make_items(
@@ -424,6 +427,8 @@ class ProjectTopping(QObject):
 
             self.clear()
             for variable_key in export_settings.variables:
+                variable_item = {}
+
                 variable_value = QgsExpressionContextUtils.projectScope(
                     project
                 ).variable(variable_key)
@@ -434,22 +439,23 @@ class ProjectTopping(QObject):
                     temporary_toppingfile_path = os.path.join(
                         self.temporary_toppingfile_dir, os.path.basename(variable_value)
                     )
-                    variable_value = temporary_toppingfile_path
+                    variable_item["value"] = temporary_toppingfile_path
+                    variable_item["ispath"] = True
+                else:
+                    variable_item["value"] = variable_value
 
-                self[variable_key] = variable_value or None
+                self[variable_key] = variable_item or None
 
-        def item_dict(self, target: Target):
+        def resolved_dict(self, target: Target):
             resolved_items = {}
-            for variable_name in self.keys():
-                # here we need to know if it's a pathvariable or not
-                # this has to be overthought... it's not working like this
-                if path:
-                    resolved_item = {}
-                    resolved_item["templatefile"] = target.toppingfile_link(
-                        ProjectTopping.LAYOUTTEMPLATE_TYPE,
-                        self[layout_name]["templatefile"],
+            for variable_key in self.keys():
+                resolved_value = self[variable_key].get("value")
+                if self[variable_key].get("ispath", False):
+                    resolved_value = target.toppingfile_link(
+                        ProjectTopping.GENERIC_TYPE,
+                        self[variable_key].get("value"),
                     )
-                resolved_items[layout_name] = resolved_item
+                resolved_items[variable_key] = resolved_value
             return resolved_items
 
     class Properties(dict):
@@ -637,9 +643,9 @@ class ProjectTopping(QObject):
         mapthemes_dict = dict(self.mapthemes)
         if mapthemes_dict:
             projecttopping_dict["mapthemes"] = mapthemes_dict
-        variables_dict = self.variables.item_dict(target)
-        if variables_dict:
-            projecttopping_dict["variables"] = variables_dict
+        variables_resolved_dict = self.variables.resolved_dict(target)
+        if variables_resolved_dict:
+            projecttopping_dict["variables"] = variables_resolved_dict
         properties_dict = dict(self.properties)
         if properties_dict:
             projecttopping_dict["properties"] = properties_dict

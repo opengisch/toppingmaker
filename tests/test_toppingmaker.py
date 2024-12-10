@@ -43,6 +43,9 @@ class ToppingMakerTest(unittest.TestCase):
     def setUpClass(cls):
         """Run before all tests."""
         cls.basetestpath = tempfile.mkdtemp()
+        cls.testdata_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "testdata"
+        )
         cls.projecttopping_test_path = os.path.join(cls.basetestpath, "projecttopping")
 
     def test_target(self):
@@ -143,9 +146,11 @@ class ToppingMakerTest(unittest.TestCase):
         # check variables
         variables = project_topping.variables
         # Anyway in practice no spaces should be used to be able to access them in the expressions like @first_variable
-        assert variables.get("First Variable") == "This is a test value."
+        assert variables.get("First Variable")
+        assert variables.get("First Variable")["value"] == "This is a test value."
         # QGIS is currently (3.29) not able to store structures in the project file. Still...
-        assert variables.get("Variable with Structure") == [
+        assert variables.get("Variable with Structure")
+        assert variables.get("Variable with Structure")["value"] == [
             "Not",
             "The",
             "Normal",
@@ -416,11 +421,18 @@ class ToppingMakerTest(unittest.TestCase):
                         "Case",
                     ]
                     foundVariableWithStructure = True
+                if variable_key == "Validation Path Variable":
+                    assert (
+                        projecttopping_data["variables"][variable_key]
+                        == "freddys_projects/this_specific_project/generic/freddys_validConfig.ini"
+                    )
+                    foundVariableWithPath = True
                 variable_count += 1
 
-        assert variable_count == 2
+        assert variable_count == 3
         assert foundFirstVariable
         assert foundVariableWithStructure
+        assert foundVariableWithPath
 
         # check transaction mode
         with open(projecttopping_file_path) as yamlfile:
@@ -471,12 +483,13 @@ class ToppingMakerTest(unittest.TestCase):
 
         countchecked = 0
 
-        # there should be 21 toppingfiles:
+        # there should be 22 toppingfiles:
         # - one project topping
         # - 2 x 3 qlr files (two times since the layers are multiple times in the tree)
         # - 2 x 6 qml files (one layers with 3 styles, one layer with 2 styles and one layer with one style - and two times since the layers are multiple times in the tree)
         # - 2 qpt template files
-        assert len(target.toppingfileinfo_list) == 21
+        # - 1 generic file (validation.ini) what is created by variable
+        assert len(target.toppingfileinfo_list) == 22
 
         for toppingfileinfo in target.toppingfileinfo_list:
             self.print_info(toppingfileinfo["path"])
@@ -703,6 +716,11 @@ class ToppingMakerTest(unittest.TestCase):
         QgsExpressionContextUtils.setProjectVariable(
             project, "Variable with Structure", ["Not", "The", "Normal", 815, "Case"]
         )
+        QgsExpressionContextUtils.setProjectVariable(
+            project,
+            "Validation Path Variable",
+            os.path.join(self.testdata_path, "validConfig.ini"),
+        )
 
         # create layouts
         layout = QgsPrintLayout(project)
@@ -788,7 +806,13 @@ class ToppingMakerTest(unittest.TestCase):
         export_settings.mapthemes = ["French Theme", "Robot Theme"]
 
         # define the custom variables to export
-        export_settings.variables = ["First Variable", "Variable with Structure"]
+        export_settings.variables = [
+            "First Variable",
+            "Variable with Structure",
+            "Validation Path Variable",
+        ]
+        # content of this variable should be exported as toppingfile
+        export_settings.path_variables = ["Validation Path Variable"]
 
         # define the layouts to export
         export_settings.layouts = ["Layout One", "Layout Three"]

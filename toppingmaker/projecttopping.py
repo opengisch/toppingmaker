@@ -559,7 +559,7 @@ class ProjectTopping(QObject):
             self.layertree.make_item(project, project.layerTreeRoot(), export_settings)
             self.stdout.emit(
                 self.tr("QGIS project layertree parsed with export settings."),
-                Qgis.Info,
+                Qgis.MessageLevel.Info,
             )
             # make layerorder
             layerorder_layers = (
@@ -567,7 +567,7 @@ class ProjectTopping(QObject):
             )
             if layerorder_layers:
                 self.layerorder = [layer.name() for layer in layerorder_layers]
-            self.stdout.emit(self.tr("QGIS project layerorder parsed."), Qgis.Info)
+            self.stdout.emit(self.tr("QGIS project layerorder parsed."), Qgis.MessageLevel.Info)
             # make mapthemes
             self.mapthemes.make_items(project, export_settings)
             # make variables
@@ -579,11 +579,11 @@ class ProjectTopping(QObject):
 
             self.stdout.emit(
                 self.tr("QGIS project map themes parsed with export settings."),
-                Qgis.Info,
+                Qgis.MessageLevel.Info,
             )
         else:
             self.stdout.emit(
-                self.tr("Could not parse the QGIS project..."), Qgis.Warning
+                self.tr("Could not parse the QGIS project..."), Qgis.MessageLevel.Warning
             )
             return False
         return True
@@ -610,7 +610,7 @@ class ProjectTopping(QObject):
                 self.tr("Project Topping written to YAML file: {}").format(
                     projecttopping_yamlfile
                 ),
-                Qgis.Info,
+                Qgis.MessageLevel.Info,
             )
         return target.path_resolver(
             target, projecttopping_slug, ProjectTopping.PROJECTTOPPING_TYPE
